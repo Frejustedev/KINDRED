@@ -17,7 +17,7 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext({});
 
@@ -105,8 +105,8 @@ export function AuthProvider({ children }) {
       });
 
       // Sauvegarder le code localement
-      await AsyncStorage.setItem('coupleSecretCode', secretCode);
-      await AsyncStorage.setItem('coupleId', coupleId);
+      // await AsyncStorage.setItem('coupleSecretCode', secretCode);
+      // await AsyncStorage.setItem('coupleId', coupleId);
 
       // Charger les données du couple
       await loadCoupleData(coupleId);
@@ -160,8 +160,8 @@ export function AuthProvider({ children }) {
       });
 
       // Sauvegarder le code localement
-      await AsyncStorage.setItem('coupleSecretCode', secretCode);
-      await AsyncStorage.setItem('coupleId', coupleId);
+      // await AsyncStorage.setItem('coupleSecretCode', secretCode);
+      // await AsyncStorage.setItem('coupleId', coupleId);
 
       // Charger les données du couple
       await loadCoupleData(coupleId);
@@ -199,8 +199,8 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       await signOut(auth);
-      await AsyncStorage.removeItem('coupleSecretCode');
-      await AsyncStorage.removeItem('coupleId');
+      // await AsyncStorage.removeItem('coupleSecretCode');
+      // await AsyncStorage.removeItem('coupleId');
       setCurrentUser(null);
       setCurrentCouple(null);
       setIsAuthenticated(false);

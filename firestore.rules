@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonction pour vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Fonction pour vérifier si l'utilisateur fait partie du couple
+    function isCoupleMember(coupleId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/couples/$(coupleId)) &&
+             request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.users;
+    }
+    
+    // Fonction pour vérifier si l'utilisateur est le propriétaire
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Règles pour les utilisateurs
+    match /users/{userId} {
+      // Lecture: autorisée au propriétaire OU aux membres du même couple
+      allow read: if isOwner(userId) || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(userId)) &&
+        // Récupère l'ID de couple du profil cible et du demandeur puis compare
+        get(/databases/$(database)/documents/users/$(userId)).data.coupledWith != null &&
+        get(/databases/$(database)/documents/users/$(userId)).data.coupledWith ==
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coupledWith
+      );
+
+      // Écriture: uniquement par le propriétaire
+      allow write: if isOwner(userId);
+    }
+    
+    // Règles pour les couples
+    match /couples/{coupleId} {
+      allow read, write: if isAuthenticated();
+      
+      // Sous-collections du couple
+      match /messages/{messageId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+      
+      match /journal/{entryId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+      
+      match /events/{eventId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+      
+      match /transactions/{transactionId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+      
+                         match /capsules/{capsuleId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+
+      match /typing/{topicId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+
+      match /lists/{listId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+
+      match /notes/{noteId} {
+        allow read, write: if isCoupleMember(coupleId);
+      }
+    }
+    
+    // Règles pour les dates marquantes (milestones)
+    match /CoupleMilestones/{milestoneId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Règles pour les logs d'activité
+    match /ActivityLogs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Règles pour les invitations
+    match /invites/{inviteId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                   (resource.data.used == false || request.auth.uid == resource.data.usedBy);
+    }
+    
+    // Règles pour les tokens de notification
+    match /notification_tokens/{tokenId} {
+      allow read, write: if isOwner(resource.data.userId);
+    }
+    
+
+  }
+}

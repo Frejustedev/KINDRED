@@ -1,181 +1,174 @@
-# Kindred - Application de Couple
+# 💕 Kindred - Application pour Couples
 
-Une application mobile complète pour couples, construite avec React Native et Expo, offrant des fonctionnalités de communication sécurisée, de partage de moments et de gestion de couple.
+Une application mobile complète conçue pour les couples qui souhaitent partager leur vie ensemble de manière sécurisée et organisée.
 
 ## 🚀 Fonctionnalités
 
+### 📱 Interface Principale
+- **Page d'accueil personnalisée** avec statistiques du couple
+- **Actions rapides** pour accéder rapidement aux fonctionnalités
+- **Historique d'amour** avec dates marquantes cliquables
+- **Notifications système** pour les actions du partenaire
+
 ### 💬 Communication
-- **Chat en temps réel** avec messages chiffrés
-- **Topics de conversation** (général, voyage, budget, surprises)
-- **Réactions aux messages** avec emojis
-- **Statut de lecture** des messages
+- **Messages privés** chiffrés de bout en bout
+- **Sujets de conversation** organisés
+- **Réactions et emojis** pour exprimer les sentiments
+- **Messages vocaux** et médias partagés
 
 ### 📅 Organisation
-- **Calendrier partagé** avec événements
-- **Journal intime** avec humeurs et tags
-- **Gestion de budget** commune
-- **Capsules temporelles** (messages pour le futur)
+- **Agenda partagé** avec événements récurrents
+- **Notes collaboratives** en temps réel
+- **Listes partagées** (courses, tâches, etc.)
+- **Capsules temporelles** pour les souvenirs futurs
 
-### 🔒 Sécurité
-- **Coffre sensible** pour médias auto-destructifs (24h)
-- **Chiffrement** des messages et données sensibles
-- **Authentification** Firebase sécurisée
-- **Codes PIN** pour l'accès au couple
+### 💰 Gestion Financière
+- **Budget partagé** avec catégories personnalisées
+- **Suivi des dépenses** en temps réel
+- **Statistiques** et graphiques de consommation
+- **Objectifs financiers** communs
 
-### 📱 Interface
-- **Design moderne** avec gradients et animations
-- **Navigation intuitive** par onglets
-- **Thème cohérent** dans toute l'application
-- **Responsive** pour tous les écrans
+### 🎯 Dates Marquantes
+- **Historique d'amour** complet
+- **Dates importantes** (rencontre, mariage, etc.)
+- **Calcul de durée** en jours, semaines, mois, années
+- **Édition et suppression** des dates
 
-## 🛠️ Technologies
+### 🔔 Notifications
+- **Système de logs** pour toutes les actions
+- **Notifications push** pour les événements importants
+- **Badge de notifications** non lues
+- **Historique d'activité** détaillé
 
-- **React Native** avec Expo SDK 53
-- **TypeScript** pour la sécurité des types
-- **Firebase** (Auth, Firestore, Storage)
+## 🛠️ Technologies Utilisées
+
+- **React Native** avec Expo
+- **TypeScript** pour la sécurité du code
+- **Firebase** (Firestore, Auth, Storage)
 - **React Navigation** pour la navigation
-- **Expo Linear Gradient** pour les effets visuels
-- **Expo Notifications** pour les alertes
-- **Expo Image Picker** pour la sélection de médias
+- **AsyncStorage** pour la persistance locale
+- **Expo Notifications** pour les push notifications
 
 ## 📋 Prérequis
 
-- Node.js (v16 ou supérieur)
+- Node.js (version 16 ou supérieure)
 - npm ou yarn
 - Expo CLI
 - Compte Firebase
-- Appareil mobile ou émulateur
+- Compte Expo
 
-## 🔧 Installation
+## 🚀 Installation
 
 1. **Cloner le repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/frejusteagboton/kindred-app.git
    cd kindred-app
    ```
 
 2. **Installer les dépendances**
    ```bash
    npm install
+   # ou
+   yarn install
    ```
 
 3. **Configuration Firebase**
    - Créer un projet Firebase
-   - Activer Authentication, Firestore et Storage
-   - Copier les clés de configuration dans `src/config/firebase.ts`
+   - Configurer Firestore, Auth et Storage
+   - Mettre à jour `src/config/firebase.ts` avec vos clés
 
-4. **Déployer les règles Firestore**
+4. **Configuration Expo**
    ```bash
-   firebase deploy --only firestore:rules
+   expo login
+   expo config
    ```
 
 5. **Lancer l'application**
    ```bash
-   npx expo start
+   expo start
    ```
+
+## 🔧 Configuration
+
+### Firebase
+1. Créer un projet Firebase
+2. Activer Authentication, Firestore et Storage
+3. Configurer les règles de sécurité Firestore
+4. Ajouter les index nécessaires
+
+### Variables d'environnement
+Créer un fichier `.env` à la racine :
+```env
+EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
 
 ## 📱 Utilisation
 
-### Première utilisation
-1. **Créer un compte** avec email/mot de passe
-2. **Créer ou rejoindre un couple** avec code d'invitation
-3. **Configurer le PIN** de sécurité
-4. **Personnaliser les paramètres** de notification
+### Création de compte
+1. S'inscrire avec email, mot de passe et informations personnelles
+2. Vérifier l'email de confirmation
+3. Créer ou rejoindre un couple
+
+### Jumelage
+- **Créer un couple** : Inviter le partenaire par email
+- **Rejoindre un couple** : Utiliser le code d'invitation
+- **Sécurité** : Code PIN pour protéger les conversations
 
 ### Fonctionnalités principales
-- **Messages** : Chat en temps réel avec votre partenaire
-- **Calendrier** : Planifiez vos événements ensemble
-- **Journal** : Partagez vos moments et humeurs
-- **Budget** : Gérez vos finances communes
-- **Coffre** : Partagez des médias sensibles (auto-destructifs)
-- **Capsules** : Créez des messages pour le futur
+- **Messages** : Communication privée et sécurisée
+- **Agenda** : Planification d'événements partagés
+- **Budget** : Gestion financière commune
+- **Notes** : Collaboration en temps réel
+- **Capsules** : Messages pour le futur
 
-## 🔐 Sécurité
+## 🔒 Sécurité
 
-- **Chiffrement** : Tous les messages sensibles sont chiffrés
-- **Authentification** : Firebase Auth avec validation email
-- **Autorisations** : Règles Firestore strictes par couple
-- **TTL** : Suppression automatique des médias sensibles
-- **PIN** : Protection supplémentaire pour l'accès au couple
+- **Chiffrement** des messages de bout en bout
+- **Authentification** Firebase sécurisée
+- **Code PIN** pour les couples
+- **Persistance** d'authentification robuste
+- **Validation** des données côté client et serveur
 
-## 📊 Architecture
+## 📊 Structure du Projet
 
 ```
 src/
 ├── components/          # Composants réutilisables
+│   ├── common/         # Composants génériques
+│   └── messages/       # Composants de messages
 ├── config/             # Configuration Firebase
-├── constants/          # Constantes et thèmes
+├── constants/          # Constantes et couleurs
 ├── hooks/              # Hooks personnalisés
-├── navigation/         # Configuration de navigation
+├── navigation/         # Navigation de l'app
 ├── screens/            # Écrans de l'application
 │   ├── auth/          # Authentification
 │   ├── main/          # Écrans principaux
 │   └── settings/      # Paramètres
-├── services/           # Services métier
-│   ├── encryption/    # Chiffrement
-│   ├── firebase/      # Services Firebase
-│   └── notifications/ # Notifications
-├── store/             # État global (si nécessaire)
-├── types/             # Types TypeScript
-└── utils/             # Utilitaires
+├── services/           # Services Firebase
+└── types/              # Types TypeScript
 ```
 
 ## 🚀 Déploiement
 
-### Development Build
+### Build de production
 ```bash
-npx expo install expo-dev-client
-eas build --profile development --platform all
-```
+# Android
+eas build --platform android
 
-### Production Build
-```bash
-eas build --profile production --platform all
+# iOS
+eas build --platform ios
 ```
 
 ### Publication
 ```bash
-eas submit --platform all
+eas submit --platform android
+eas submit --platform ios
 ```
-
-## 🔧 Configuration
-
-### Variables d'environnement
-Créer un fichier `.env` :
-```
-FIREBASE_API_KEY=your_api_key
-FIREBASE_AUTH_DOMAIN=your_auth_domain
-FIREBASE_PROJECT_ID=your_project_id
-FIREBASE_STORAGE_BUCKET=your_storage_bucket
-FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-FIREBASE_APP_ID=your_app_id
-```
-
-### Configuration Firebase
-1. Activer Authentication (Email/Password)
-2. Créer une base Firestore avec les règles fournies
-3. Configurer Storage avec les règles de sécurité
-4. Activer les notifications push
-
-## 📈 Fonctionnalités avancées
-
-### Notifications
-- Notifications push pour nouveaux messages
-- Rappels d'événements du calendrier
-- Notifications de capsules temporelles
-- Rappels quotidiens personnalisables
-
-### Médias
-- Upload d'images et vidéos
-- Compression automatique
-- Stockage sécurisé
-- Suppression automatique (coffre)
-
-### Statistiques
-- Nombre de messages échangés
-- Streak de communication
-- Jours ensemble
-- Activité du couple
 
 ## 🤝 Contribution
 
@@ -189,24 +182,28 @@ FIREBASE_APP_ID=your_app_id
 
 Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
-## 🆘 Support
+## 👨‍💻 Développeur
+
+**Frejuste Agboton**
+- Site web : [frejusteagboton.info](https://frejusteagboton.info)
+- Version : 1.0 du 26/08/25
+
+## 📞 Support
 
 Pour toute question ou problème :
 - Ouvrir une issue sur GitHub
-- Consulter la documentation Firebase
-- Vérifier les logs Expo
+- Consulter la documentation dans l'application
+- Contacter le support via l'application
 
-## 🔮 Roadmap
+## 🎯 Roadmap
 
-- [ ] Mode sombre
-- [ ] Support multilingue
+- [ ] Support multi-langues
+- [ ] Thèmes personnalisables
 - [ ] Intégration calendrier externe
-- [ ] Rappels vocaux
+- [ ] Export de données
 - [ ] Mode hors ligne
-- [ ] Sauvegarde locale
-- [ ] Widgets iOS/Android
-- [ ] Intégration Apple Health/Google Fit
+- [ ] Widgets pour l'écran d'accueil
 
 ---
 
-**Kindred** - Connectez-vous plus profondément avec votre partenaire 💕
+**Fait avec ❤️ pour les couples du monde entier**

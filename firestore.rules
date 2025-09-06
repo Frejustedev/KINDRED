@@ -1,100 +1,202 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Fonction pour vérifier si l'utilisateur est authentifié
+    // === FONCTIONS UTILITAIRES ===
+    
+    // Vérifier si l'utilisateur est authentifié
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Fonction pour vérifier si l'utilisateur fait partie du couple
-    function isCoupleMember(coupleId) {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/couples/$(coupleId)) &&
-             request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.users;
-    }
-    
-    // Fonction pour vérifier si l'utilisateur est le propriétaire
+    // Vérifier si l'utilisateur est le propriétaire du document
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Règles pour les utilisateurs
+    // Vérifier si l'utilisateur fait partie du couple OU était membre du couple
+    function isCoupleMember(coupleId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/couples/$(coupleId)) &&
+             (request.auth.uid in get(/databases/$(database)/documents/couples/$(coupleId)).data.users ||
+              request.auth.uid == get(/databases/$(database)/documents/couples/$(coupleId)).data.leftBy);
+    }
+    
+
+    // === RÈGLES POUR LES UTILISATEURS ===
     match /users/{userId} {
-      // Lecture: autorisée au propriétaire OU aux membres du même couple
-      allow read: if isOwner(userId) || (
-        isAuthenticated() &&
-        exists(/databases/$(database)/documents/users/$(userId)) &&
-        // Récupère l'ID de couple du profil cible et du demandeur puis compare
-        get(/databases/$(database)/documents/users/$(userId)).data.coupledWith != null &&
-        get(/databases/$(database)/documents/users/$(userId)).data.coupledWith ==
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coupledWith
-      );
+      // Lecture: autorisée au propriétaire OU aux utilisateurs authentifiés (pour recherche email) OU aux membres du même couple
+      allow read: if isOwner(userId) || isAuthenticated();
+      
+      // Permettre les requêtes sur la collection users pour rechercher par email
+      allow list: if isAuthenticated();
 
       // Écriture: uniquement par le propriétaire
-      allow write: if isOwner(userId);
+      // Exception: permettre la mise à jour des champs liés au couple
+      allow update: if isOwner(userId) || (
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasAll(['coupledWith']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coupledWith', 'leftCoupleAt'])
+      );
+      
+      // Création: uniquement par le propriétaire
+      allow create: if isOwner(userId);
+      
+      // Suppression: jamais (garder l'historique)
+      allow delete: if false;
     }
-    
-    // Règles pour les couples
+
+    // === RÈGLES POUR LES COUPLES ===
     match /couples/{coupleId} {
-      allow read, write: if isAuthenticated();
+      // ACCÈS COMPLET pour TOUS les utilisateurs authentifiés
+      allow read, write, create, update: if isAuthenticated();
       
-      // Sous-collections du couple
-      match /messages/{messageId} {
-        allow read, write: if isCoupleMember(coupleId);
-      }
+      // Suppression: jamais (garder l'historique)
+      allow delete: if false;
       
-      match /journal/{entryId} {
-        allow read, write: if isCoupleMember(coupleId);
-      }
-      
-      match /events/{eventId} {
-        allow read, write: if isCoupleMember(coupleId);
-      }
-      
-      match /transactions/{transactionId} {
-        allow read, write: if isCoupleMember(coupleId);
-      }
-      
-                         match /capsules/{capsuleId} {
-        allow read, write: if isCoupleMember(coupleId);
-      }
-
-      match /typing/{topicId} {
-        allow read, write: if isCoupleMember(coupleId);
-      }
-
-      match /lists/{listId} {
-        allow read, write: if isCoupleMember(coupleId);
-      }
-
-      match /notes/{noteId} {
-        allow read, write: if isCoupleMember(coupleId);
+      // Sous-collections
+      match /{subcollection}/{document=**} {
+        allow read, write, create, update, delete: if isAuthenticated();
       }
     }
-    
-    // Règles pour les dates marquantes (milestones)
-    match /CoupleMilestones/{milestoneId} {
-      allow read, write: if isAuthenticated();
+
+    // === RÈGLES POUR LES INVITATIONS DE COUPLE ===
+    match /couple_invitations/{invitationId} {
+      // ACCÈS COMPLET pour TOUS les utilisateurs authentifiés
+      allow read, write, create, update, delete: if isAuthenticated();
     }
-    
-    // Règles pour les logs d'activité
-    match /ActivityLogs/{logId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    // Règles pour les invitations
-    match /invites/{inviteId} {
-      allow read: if isAuthenticated();
+
+    // === RÈGLES POUR LES MESSAGES ===
+    match /messages/{messageId} {
+      // Lecture et écriture: uniquement par les membres du couple
+      allow read, write: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/messages/$(messageId)) &&
+        isCoupleMember(get(/databases/$(database)/documents/messages/$(messageId)).data.coupleId);
+      
+      // Création: par les utilisateurs authentifiés
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && 
-                   (resource.data.used == false || request.auth.uid == resource.data.usedBy);
+      
+      // Suppression: jamais (garder l'historique)
+      allow delete: if false;
     }
-    
-    // Règles pour les tokens de notification
-    match /notification_tokens/{tokenId} {
-      allow read, write: if isOwner(resource.data.userId);
-    }
-    
 
+    // === RÈGLES POUR LES CAPSULES TEMPS ===
+    match /time_capsules/{capsuleId} {
+      // Lecture et écriture: uniquement par les membres du couple
+      allow read, write: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/time_capsules/$(capsuleId)) &&
+        isCoupleMember(get(/databases/$(database)/documents/time_capsules/$(capsuleId)).data.coupleId);
+      
+      // Création: par les utilisateurs authentifiés
+      allow create: if isAuthenticated();
+      
+      // Suppression: par le créateur uniquement
+      allow delete: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/time_capsules/$(capsuleId)) &&
+        get(/databases/$(database)/documents/time_capsules/$(capsuleId)).data.createdBy == request.auth.uid;
+    }
+
+    // === RÈGLES POUR LES ÉVÉNEMENTS ===
+    match /events/{eventId} {
+      // Lecture et écriture: uniquement par les membres du couple
+      allow read, write: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/events/$(eventId)) &&
+        isCoupleMember(get(/databases/$(database)/documents/events/$(eventId)).data.coupleId);
+      
+      // Création: par les utilisateurs authentifiés
+      allow create: if isAuthenticated();
+      
+      // Suppression: par le créateur uniquement
+      allow delete: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/events/$(eventId)) &&
+        get(/databases/$(database)/documents/events/$(eventId)).data.createdBy == request.auth.uid;
+    }
+
+    // === RÈGLES POUR LES PHOTOS ===
+    match /photos/{photoId} {
+      // Lecture et écriture: uniquement par les membres du couple
+      allow read, write: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/photos/$(photoId)) &&
+        isCoupleMember(get(/databases/$(database)/documents/photos/$(photoId)).data.coupleId);
+      
+      // Création: par les utilisateurs authentifiés
+      allow create: if isAuthenticated();
+      
+      // Suppression: par le créateur uniquement
+      allow delete: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/photos/$(photoId)) &&
+        get(/databases/$(database)/documents/photos/$(photoId)).data.uploadedBy == request.auth.uid;
+    }
+
+    // === RÈGLES POUR LES NOTIFICATIONS ===
+    match /notifications/{notificationId} {
+      // Lecture et écriture: uniquement par le destinataire
+      allow read, write: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/notifications/$(notificationId)) &&
+        get(/databases/$(database)/documents/notifications/$(notificationId)).data.userId == request.auth.uid;
+      
+      // Création: par les utilisateurs authentifiés
+      allow create: if isAuthenticated();
+      
+      // Suppression: par le destinataire uniquement
+      allow delete: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/notifications/$(notificationId)) &&
+        get(/databases/$(database)/documents/notifications/$(notificationId)).data.userId == request.auth.uid;
+    }
+
+    // === RÈGLES POUR LES PARAMÈTRES ===
+    match /settings/{userId} {
+      // Lecture et écriture: uniquement par le propriétaire
+      allow read, write: if isOwner(userId);
+      
+      // Création: par le propriétaire
+      allow create: if isOwner(userId);
+      
+      // Suppression: jamais
+      allow delete: if false;
+    }
+
+    // === RÈGLES POUR LES STATISTIQUES ===
+    match /analytics/{analyticsId} {
+      // Lecture: par les administrateurs uniquement (à implémenter)
+      allow read: if false;
+      
+      // Écriture: par les utilisateurs authentifiés pour leurs propres données
+      allow write: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/analytics/$(analyticsId)) &&
+        get(/databases/$(database)/documents/analytics/$(analyticsId)).data.userId == request.auth.uid;
+      
+      // Création: par les utilisateurs authentifiés
+      allow create: if isAuthenticated();
+      
+      // Suppression: jamais
+      allow delete: if false;
+    }
+
+    // === RÈGLES POUR LES ACTIVITY LOGS ===
+    match /ActivityLogs/{logId} {
+      // Lecture: par les utilisateurs authentifiés (règle simplifiée)
+      allow read: if isAuthenticated();
+      
+      // Écriture: par les utilisateurs authentifiés
+      allow write: if isAuthenticated();
+      
+      // Création: par les utilisateurs authentifiés
+      allow create: if isAuthenticated();
+      
+      // Suppression: par le créateur uniquement
+      allow delete: if isAuthenticated() &&
+        exists(/databases/$(database)/documents/ActivityLogs/$(logId)) &&
+        get(/databases/$(database)/documents/ActivityLogs/$(logId)).data.userId == request.auth.uid;
+    }
+
+    // === RÈGLES POUR LES COUPLE MILESTONES ===
+    match /CoupleMilestones/{milestoneId} {
+      allow read, write, create, update, delete: if isAuthenticated();
+    }
+    
+    // === RÈGLE DE FALLBACK POUR TOUTES LES AUTRES COLLECTIONS ===
+    match /{document=**} {
+      allow read, write, create, update, delete: if isAuthenticated();
+    }
   }
 }

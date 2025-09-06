@@ -5,6 +5,9 @@ import { useAuth } from '../hooks/useAuth';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { SignUpScreen } from '../screens/auth/SignUpScreen';
 import { CouplingScreen } from '../screens/auth/CouplingScreen';
+import { SimpleCouplingScreen } from '../screens/auth/SimpleCouplingScreen';
+import { InvitationsScreen } from '../screens/couple/InvitationsScreen';
+import { PendingConnectionScreen } from '../screens/couple/PendingConnectionScreen';
 import { MainNavigator } from './MainNavigator';
 import { LoadingScreen } from '../screens/auth/LoadingScreen';
 
@@ -29,6 +32,9 @@ export const RootNavigator: React.FC = () => {
           <>
             <Stack.Screen name="Main" component={MainNavigator} />
             <Stack.Screen name="Coupling" component={CouplingScreen} />
+            <Stack.Screen name="SimpleCoupling" component={SimpleCouplingScreen} />
+            <Stack.Screen name="Invitations" component={InvitationsScreen} />
+            <Stack.Screen name="PendingConnection" component={PendingConnectionScreen} />
           </>
         ) : (
           // Utilisateur non connecté - Navigation d'authentification
@@ -36,6 +42,9 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="SignUp" component={SignUpScreen} />
             <Stack.Screen name="Coupling" component={CouplingScreen} />
+            <Stack.Screen name="SimpleCoupling" component={SimpleCouplingScreen} />
+            <Stack.Screen name="Invitations" component={InvitationsScreen} />
+            <Stack.Screen name="PendingConnection" component={PendingConnectionScreen} />
           </>
         )}
       </Stack.Navigator>

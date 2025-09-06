@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../constants/colors';
+import { colors, shadowStyles } from '../../constants/colors';
 import { Header } from '../../components/common/Header';
 import { useActivityLogs } from '../../hooks/useActivityLogs';
 import { Ionicons } from '@expo/vector-icons';
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   unreadLog: {
     borderLeftWidth: 4,

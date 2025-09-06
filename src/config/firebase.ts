@@ -2,7 +2,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { 
   getAuth, 
   initializeAuth,
-  getReactNativePersistence
+  type Auth
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -27,14 +27,13 @@ if (getApps().length === 0) {
   app = getApps()[0];
 }
 
-// Initialize Auth with React Native persistence
-let auth;
+// Initialize Auth
+let auth: Auth;
 try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
+  auth = getAuth(app);
+  console.log('✅ Firebase Auth initialisé avec succès');
 } catch (error) {
-  // Si l'auth est déjà initialisé, utiliser getAuth
+  console.error('❌ Erreur initialisation Auth:', error);
   auth = getAuth(app);
 }
 

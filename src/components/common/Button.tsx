@@ -8,18 +8,20 @@ import {
   TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, shadowStyles } from '../../constants/colors';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
+  fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
-  fullWidth?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -29,33 +31,49 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'medium',
   disabled = false,
   loading = false,
+  fullWidth = false,
   style,
   textStyle,
-  fullWidth = false,
+  icon,
 }) => {
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: 12,
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      flexDirection: 'row',
+      borderRadius: 12,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      minHeight: 48,
       ...(fullWidth && { width: '100%' }),
     };
 
     const sizeStyles = {
-      small: { paddingVertical: 8, paddingHorizontal: 16, minHeight: 36 },
-      medium: { paddingVertical: 12, paddingHorizontal: 24, minHeight: 48 },
-      large: { paddingVertical: 16, paddingHorizontal: 32, minHeight: 56 },
+      small: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        minHeight: 36,
+      },
+      medium: {
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        minHeight: 48,
+      },
+      large: {
+        paddingHorizontal: 32,
+        paddingVertical: 16,
+        minHeight: 56,
+      },
     };
 
     const variantStyles = {
       primary: {
         backgroundColor: colors.primary,
-        ...colors.shadow,
+        ...shadowStyles,
       },
       secondary: {
         backgroundColor: colors.secondary,
-        ...colors.shadow,
+        ...shadowStyles,
       },
       outline: {
         backgroundColor: 'transparent',
@@ -64,6 +82,10 @@ export const Button: React.FC<ButtonProps> = ({
       },
       ghost: {
         backgroundColor: 'transparent',
+      },
+      danger: {
+        backgroundColor: colors.error,
+        ...shadowStyles,
       },
     };
 
@@ -96,6 +118,7 @@ export const Button: React.FC<ButtonProps> = ({
       secondary: { color: colors.textOnPrimary },
       outline: { color: colors.primary },
       ghost: { color: colors.primary },
+      danger: { color: colors.textOnPrimary },
     };
 
     return {
@@ -107,13 +130,29 @@ export const Button: React.FC<ButtonProps> = ({
     };
   };
 
+  const getIconColor = () => {
+    if (variant === 'primary' || variant === 'secondary' || variant === 'danger') {
+      return colors.textOnPrimary;
+    }
+    return colors.primary;
+  };
+
+  const getIconSize = () => {
+    switch (size) {
+      case 'small': return 16;
+      case 'medium': return 18;
+      case 'large': return 20;
+      default: return 18;
+    }
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
         <>
           <ActivityIndicator
             size="small"
-            color={variant === 'primary' || variant === 'secondary' ? colors.textOnPrimary : colors.primary}
+            color={getIconColor()}
             style={{ marginRight: 8 }}
           />
           <Text style={getTextStyle()}>{title}</Text>
@@ -121,7 +160,19 @@ export const Button: React.FC<ButtonProps> = ({
       );
     }
 
-    return <Text style={getTextStyle()}>{title}</Text>;
+    return (
+      <>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={getIconSize()}
+            color={getIconColor()}
+            style={{ marginRight: 8 }}
+          />
+        )}
+        <Text style={getTextStyle()}>{title}</Text>
+      </>
+    );
   };
 
   if (variant === 'primary') {

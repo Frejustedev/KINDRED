@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Header } from '../../../components/common/Header';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   entryHeader: {
     flexDirection: 'row',

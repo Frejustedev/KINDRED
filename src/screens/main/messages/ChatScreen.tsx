@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
 import { useMessages } from '../../../hooks/useMessages';
@@ -44,7 +44,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
     isLoading,
     isTyping,
     setIsTyping,
-    typingUsers
+    typingUsers,
+    clearTopicMessages
   } = useMessages();
   const { user } = useAuth();
   const { couple } = useCouple();
@@ -59,8 +60,37 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Fonction pour effacer tous les messages
+  const handleClearMessages = () => {
+    if (!currentTopic || !couple) return;
+    
+    const topicDisplayName = !currentTopic || currentTopic === 'général' ? 'Principal' : currentTopic;
+    
+    Alert.alert(
+      'Effacer tous les messages',
+      `Êtes-vous sûr de vouloir effacer tous les messages de "${topicDisplayName}" ?\n\nCette action est irréversible et supprimera définitivement tous les messages.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Effacer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearTopicMessages(currentTopic || 'général');
+              Alert.alert('Succès', 'Tous les messages ont été effacés');
+              setShowMenu(false);
+            } catch (error: any) {
+              Alert.alert('Erreur', error.message || 'Impossible d\'effacer les messages');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Fonctions de recherche et filtres
   const filterMessages = () => {
     let filtered = currentTopicMessages;
@@ -386,7 +416,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
               >
                 <Ionicons name="search" size={20} color={colors.textOnPrimary} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.moreButton}>
+              <TouchableOpacity 
+                style={styles.moreButton}
+                onPress={() => setShowMenu(true)}
+              >
                 <Ionicons name="ellipsis-vertical" size={20} color={colors.textOnPrimary} />
               </TouchableOpacity>
             </View>
@@ -559,6 +592,50 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
             </View>
           </View>
         )}
+
+        {/* Menu contextuel */}
+        <Modal
+          visible={showMenu}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowMenu(false)}
+        >
+          <TouchableOpacity 
+            style={styles.menuOverlay}
+            activeOpacity={1}
+            onPress={() => setShowMenu(false)}
+          >
+            <View style={styles.menuContainer}>
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={handleClearMessages}
+              >
+                <Ionicons name="trash-outline" size={20} color={colors.warning} />
+                <Text style={styles.menuItemText}>Effacer tous les messages</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.menuItem}
+                onPress={() => {
+                  setShowMenu(false);
+                  // Ici on pourrait ajouter d'autres fonctionnalités
+                  Alert.alert('Info', 'Fonctionnalité à venir');
+                }}
+              >
+                <Ionicons name="information-circle-outline" size={20} color={colors.info} />
+                <Text style={styles.menuItemText}>Informations du topic</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.menuItem, styles.menuItemCancel]}
+                onPress={() => setShowMenu(false)}
+              >
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+                <Text style={[styles.menuItemText, styles.menuItemCancelText]}>Annuler</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -857,14 +934,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  moreButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
   searchContainer: {
     backgroundColor: colors.surface,
@@ -1000,6 +1069,42 @@ const styles = StyleSheet.create({
   },
   datePickerButtonTextPrimary: {
     color: colors.textOnPrimary,
+  },
+
+  // Styles pour le menu contextuel
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    paddingBottom: 50,
+  },
+  menuContainer: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    paddingVertical: 8,
+    ...shadowStyles,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: colors.text,
+    marginLeft: 12,
+    fontWeight: '500',
+  },
+  menuItemCancel: {
+    borderBottomWidth: 0,
+    marginTop: 8,
+  },
+  menuItemCancelText: {
+    color: colors.textSecondary,
   },
 
 });

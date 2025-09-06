@@ -9,20 +9,26 @@ interface CoupleContextType {
   isLoading: boolean;
   error: string | null;
   partnerInfo: UserProfile | null;
+  pendingInvitations: any[];
   createCouple: (partnerEmail: string, pin: string) => Promise<string>;
-  joinCouple: (inviteCode: string, pin: string) => Promise<string>;
+  joinCouple: (partnerEmailOrCode: string, pin: string) => Promise<string>;
+  acceptInvitation: (invitationId: string) => Promise<string>;
+  rejectInvitation: (invitationId: string) => Promise<void>;
   leaveCouple: () => Promise<void>;
+  dissolveCouple: () => Promise<void>;
   generateInviteCode: () => Promise<string>;
   refreshCouple: () => Promise<void>;
+  loadPendingInvitations: () => Promise<void>;
   clearError: () => void;
 }
 
 const CoupleContext = createContext<CoupleContextType | undefined>(undefined);
 
 export const CoupleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [couple, setCouple] = useState<Couple | null>(null);
   const [partnerInfo, setPartnerInfo] = useState<UserProfile | null>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unsubscribe, setUnsubscribe] = useState<(() => void) | null>(null);
@@ -46,6 +52,16 @@ export const CoupleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       console.log('Loading couple data for ID:', profile.coupledWith);
       const coupleData = await FirestoreService.getCouple(profile.coupledWith);
       console.log('Couple data loaded:', coupleData);
+      
+      // Vérifier si le couple est actif (pas quitté/dissous)
+      if (coupleData && (coupleData.status === 'left' || coupleData.users.length === 0)) {
+        console.log('🚫 Couple dissous ou quitté - ne pas charger');
+        setCouple(null);
+        setPartnerInfo(null);
+        setError(null);
+        return;
+      }
+      
       setCouple(coupleData);
       
       // Charger les informations du partenaire
@@ -126,17 +142,27 @@ export const CoupleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  // Rejoindre un couple
-  const joinCouple = async (inviteCode: string, pin: string): Promise<string> => {
-    console.log('joinCouple called with inviteCode:', inviteCode);
+  // Rejoindre un couple (détection automatique email vs code)
+  const joinCouple = async (partnerEmailOrCode: string, pin: string): Promise<string> => {
+    console.log('joinCouple called with:', partnerEmailOrCode);
     if (!user) throw new Error('Utilisateur non connecté');
 
     try {
       setIsLoading(true);
       setError(null);
 
-      console.log('Calling FirestoreService.joinCouple...');
-      const coupleId = await FirestoreService.joinCouple(user.uid, inviteCode, pin);
+      // Détecter si c'est un email ou un code d'invitation
+      const isEmail = partnerEmailOrCode.includes('@');
+      
+      let coupleId: string;
+      if (isEmail) {
+        console.log('Joining couple by partner email...');
+        coupleId = await FirestoreService.joinCoupleByEmail(user.uid, partnerEmailOrCode, pin);
+      } else {
+        console.log('Joining couple by invite code...');
+        coupleId = await FirestoreService.joinCouple(user.uid, partnerEmailOrCode, pin);
+      }
+      
       console.log('Couple joined successfully, coupleId:', coupleId);
       
       // Charger directement les données du couple
@@ -161,20 +187,70 @@ export const CoupleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   // Quitter un couple
-  const leaveCouple = async () => {
+  const leaveCouple = async (): Promise<void> => {
+    if (!user) throw new Error('Utilisateur non connecté');
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log('🚪 Début du processus de départ du couple...');
+      await FirestoreService.leaveCouple(user.uid);
+      
+      console.log('🔄 Rafraîchissement du profil utilisateur...');
+      // CRUCIAL: Rafraîchir le profil utilisateur pour récupérer coupledWith: null
+      await refreshProfile();
+      
+      // Attendre un peu pour que Firebase propage les changements
+      console.log('⏳ Attente de la propagation des changements...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Double vérification du profil
+      console.log('🔍 Double vérification du profil...');
+      await refreshProfile();
+      
+      // Réinitialiser les données du couple
+      setCouple(null);
+      setPartnerInfo(null);
+      
+      // Effacer TOUTES les données locales liées au couple
+      await AsyncStorage.removeItem('coupleData');
+      await AsyncStorage.removeItem('@kindred/couple_id');
+      await AsyncStorage.removeItem('@kindred/user_profile');
+      console.log('🗑️ Cache local complètement nettoyé');
+      
+      console.log('✅ Couple quitté avec succès - profil utilisateur mis à jour');
+      
+    } catch (error: any) {
+      console.error('Error leaving couple:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Dissoudre complètement un couple
+  const dissolveCouple = async (): Promise<void> => {
     if (!user || !couple) throw new Error('Aucun couple actif');
 
     try {
       setIsLoading(true);
       setError(null);
 
-      await FirestoreService.leaveCouple(user.uid, couple.id);
+      await FirestoreService.dissolveCouple(user.uid, couple.id);
       
       // Réinitialiser les données du couple
       setCouple(null);
       setPartnerInfo(null);
       
+      // Effacer les données locales
+      await AsyncStorage.removeItem('coupleData');
+      
+      console.log('✅ Couple dissous avec succès');
+      
     } catch (error: any) {
+      console.error('Error dissolving couple:', error);
       setError(error.message);
       throw error;
     } finally {
@@ -199,14 +275,72 @@ export const CoupleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     await loadCouple();
   };
 
+  // Charger les invitations en attente
+  const loadPendingInvitations = async () => {
+    if (!user) return;
+    
+    try {
+      const invitations = await FirestoreService.getPendingInvitations(user.uid);
+      setPendingInvitations(invitations);
+    } catch (error) {
+      console.error('Error loading pending invitations:', error);
+    }
+  };
+
+  // Accepter une invitation
+  const acceptInvitation = async (invitationId: string): Promise<string> => {
+    if (!user) throw new Error('Utilisateur non connecté');
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const coupleId = await FirestoreService.acceptCoupleInvitation(user.uid, invitationId);
+      
+      // Recharger les données
+      await loadCouple();
+      await loadPendingInvitations();
+      
+      return coupleId;
+    } catch (error: any) {
+      console.error('Error accepting invitation:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refuser une invitation
+  const rejectInvitation = async (invitationId: string): Promise<void> => {
+    if (!user) throw new Error('Utilisateur non connecté');
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      await FirestoreService.rejectCoupleInvitation(user.uid, invitationId);
+      
+      // Recharger les invitations
+      await loadPendingInvitations();
+    } catch (error: any) {
+      console.error('Error rejecting invitation:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Effacer l'erreur
   const clearError = () => {
     setError(null);
   };
 
-  // Charger le couple quand l'utilisateur change
+  // Charger le couple et les invitations quand l'utilisateur change
   useEffect(() => {
     subscribeToCouple();
+    loadPendingInvitations();
     
     // Cleanup function
     return () => {
@@ -221,11 +355,16 @@ export const CoupleProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     isLoading,
     error,
     partnerInfo,
+    pendingInvitations,
     createCouple,
     joinCouple,
+    acceptInvitation,
+    rejectInvitation,
     leaveCouple,
+    dissolveCouple,
     generateInviteCode,
     refreshCouple,
+    loadPendingInvitations,
     clearError,
   };
 

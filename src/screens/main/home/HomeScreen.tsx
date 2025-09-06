@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Header } from '../../../components/common/Header';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCouple } from '../../../hooks/useCouple';
@@ -32,7 +32,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { user, profile } = useAuth();
-  const { couple, partnerInfo } = useCouple();
+  const { couple, partnerInfo, pendingInvitations } = useCouple();
   const { messages, totalUnreadCount, refreshConversations } = useMessages();
   const { milestones, getTimeSince, getTimeUntil } = useMilestones();
   const { activityLogs } = useActivityLogs();
@@ -159,81 +159,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     return unsubscribe;
   }, [navigation, refreshConversations]);
 
-  const quickActions = [
-    {
-      icon: 'chatbubble-outline',
-      title: 'Messages',
-      subtitle: `${getUnreadCount()} non lu(s)`,
-      onPress: () => navigation.navigate('Messages'),
-      color: colors.primary,
-    },
-    {
-      icon: 'calendar-outline',
-      title: 'Agenda',
-      subtitle: 'Événements',
-      onPress: () => navigation.navigate('Organization', { screen: 'Agenda' }),
-      color: colors.info,
-    },
-    {
-      icon: 'heart-outline',
-      title: 'Dates marquantes',
-      subtitle: 'Nos moments importants',
-      onPress: () => navigation.navigate('Organization', { screen: 'Milestones' }),
-      color: colors.primary,
-    },
-    {
-      icon: 'wallet-outline',
-      title: 'Budget',
-      subtitle: 'Finances communes',
-      onPress: () => navigation.navigate('Finance', { screen: 'Budget' }),
-      color: colors.warning,
-    },
-    {
-      icon: 'time-outline',
-      title: 'Capsules',
-      subtitle: 'Messages pour le futur',
-      onPress: () => navigation.navigate('Organization', { screen: 'Capsules' }),
-      color: colors.info,
-    },
-    {
-      icon: 'list-outline',
-      title: 'Listes',
-      subtitle: 'Todo, courses, souhaits',
-      onPress: () => navigation.navigate('Organization', { screen: 'SharedLists' }),
-      color: colors.success,
-    },
-    {
-      icon: 'document-text-outline',
-      title: 'Notes',
-      subtitle: 'Éditeur collaboratif',
-      onPress: () => navigation.navigate('Organization', { screen: 'CollaborativeNotes' }),
-      color: colors.warning,
-    },
-    {
-      icon: 'settings-outline',
-      title: 'Réglages',
-      subtitle: 'Paramètres',
-      onPress: () => navigation.navigate('Settings'),
-      color: colors.secondary,
-    },
-  ];
-
-  const renderQuickAction = (action: typeof quickActions[0]) => (
-    <TouchableOpacity
-      key={action.title}
-      style={styles.quickAction}
-      onPress={action.onPress}
-      onLongPress={() => {
-        // Afficher un tooltip ou une alerte avec le nom de l'action
-        Alert.alert(action.title, action.subtitle);
-      }}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.actionIcon, { backgroundColor: action.color }]}>
-        <Ionicons name={action.icon as any} size={20} color={colors.textOnPrimary} />
-      </View>
-    </TouchableOpacity>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -451,17 +376,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
         </View>
 
-          {/* Actions rapides */}
-          <View style={styles.quickActionsSection}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="flash-outline" size={20} color={colors.warning} />
-            <Text style={styles.sectionTitle}>Actions rapides</Text>
-            </View>
-            
-            <View style={styles.quickActionsGrid}>
-            {quickActions.map(renderQuickAction)}
-            </View>
-          </View>
 
         {/* Fonctionnalités récentes */}
         <View style={styles.recentSection}>
@@ -574,7 +488,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 8,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   accordionHeaderContent: {
     flexDirection: 'row',
@@ -601,7 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -652,39 +566,11 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
 
-  quickActionsSection: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 8,
-  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: 16,
-  },
-  quickActionsGrid: {
-    gap: 12,
-  },
-  quickAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    ...colors.shadow,
-  },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   errorBanner: {
     flexDirection: 'row',
@@ -698,39 +584,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.error,
     flex: 1,
-  },
-  actionInfo: {
-    flex: 1,
-  },
-  actionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  actionSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  actionArrow: {
-    fontSize: 20,
-    color: colors.textLight,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  quickAction: {
-    width: '20%',
-    aspectRatio: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...colors.shadow,
   },
   statsSection: {
     paddingHorizontal: 24,
@@ -746,7 +599,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
 
   statCardNumber: {
@@ -776,7 +629,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
 
   featureTitle: {

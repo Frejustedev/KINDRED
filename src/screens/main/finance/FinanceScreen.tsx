@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Header } from '../../../components/common/Header';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCouple } from '../../../hooks/useCouple';
@@ -131,29 +131,21 @@ export const FinanceScreen: React.FC<FinanceScreenProps> = ({ navigation }) => {
                onPress={() => navigation.navigate('Budget')}
                activeOpacity={0.7}
              >
+               <Ionicons name="create-outline" size={24} color={colors.success} />
+               <Text style={styles.quickActionText}>Nouvelle entrée</Text>
+             </TouchableOpacity>
+             
+             <TouchableOpacity
+               style={styles.quickAction}
+               onPress={() => navigation.navigate('Budget')}
+               activeOpacity={0.7}
+             >
                <Ionicons name="analytics-outline" size={24} color={colors.info} />
                <Text style={styles.quickActionText}>Voir statistiques</Text>
              </TouchableOpacity>
            </View>
          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Conseils financiers</Text>
-          <View style={styles.tipsContainer}>
-            <View style={styles.tipCard}>
-              <Ionicons name="bulb-outline" size={24} color={colors.success} />
-              <Text style={styles.tipText}>
-                Planifiez vos dépenses mensuelles ensemble pour éviter les surprises
-              </Text>
-            </View>
-            <View style={styles.tipCard}>
-              <Ionicons name="trending-up-outline" size={24} color={colors.info} />
-              <Text style={styles.tipText}>
-                Suivez vos habitudes de dépenses pour mieux gérer votre budget
-              </Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -227,7 +219,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   iconContainer: {
     width: 60,
@@ -252,38 +244,21 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   quickAction: {
+    flex: 1,
     alignItems: 'center',
     backgroundColor: colors.surface,
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
-    minWidth: 120,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   quickActionText: {
     marginTop: 8,
     fontSize: 12,
     color: colors.text,
     textAlign: 'center',
-  },
-  tipsContainer: {
-    gap: 12,
-  },
-  tipCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    ...colors.shadow,
-  },
-  tipText: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
   },
 });

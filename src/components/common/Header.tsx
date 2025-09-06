@@ -12,6 +12,7 @@ interface HeaderProps {
     icon: keyof typeof Ionicons.glyphMap;
     onPress: () => void;
     badge?: number;
+    disabled?: boolean;
   };
   onBack?: () => void;
   badge?: number;
@@ -60,9 +61,17 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
         
         {rightAction && (
-          <TouchableOpacity style={styles.actionButton} onPress={rightAction.onPress}>
+          <TouchableOpacity 
+            style={[styles.actionButton, rightAction.disabled && styles.disabledButton]} 
+            onPress={rightAction.onPress}
+            disabled={rightAction.disabled}
+          >
             <View style={styles.iconContainer}>
-              <Ionicons name={rightAction.icon} size={22} color={colors.textOnPrimary} />
+              <Ionicons 
+                name={rightAction.icon} 
+                size={22} 
+                color={rightAction.disabled ? colors.textLight : colors.textOnPrimary} 
+              />
               {rightAction.badge && rightAction.badge > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{rightAction.badge > 99 ? '99+' : rightAction.badge}</Text>
@@ -139,5 +148,8 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });

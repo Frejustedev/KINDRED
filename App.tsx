@@ -8,7 +8,6 @@ import * as Notifications from 'expo-notifications';
 import { AuthProvider } from './src/hooks/useAuth';
 import { CoupleProvider } from './src/hooks/useCouple';
 import { MessagesProvider } from './src/hooks/useMessages';
-import { NotificationsProvider } from './src/hooks/useNotifications';
 import { BudgetProvider } from './src/hooks/useBudget';
 import { AgendaProvider } from './src/hooks/useAgenda';
 import { SharedListsProvider } from './src/hooks/useSharedLists';
@@ -46,10 +45,8 @@ export default function App() {
                       <TimeCapsuleProvider>
                         <MilestonesProvider>
                           <ActivityLogsProvider>
-                            <NotificationsProvider>
-                              <RootNavigator />
-                              <StatusBar style="auto" />
-                            </NotificationsProvider>
+                            <RootNavigator />
+                            <StatusBar style="auto" />
                           </ActivityLogsProvider>
                         </MilestonesProvider>
                       </TimeCapsuleProvider>

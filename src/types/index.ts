@@ -41,6 +41,9 @@ export interface Couple {
   topics: string[];
   settings?: CoupleSettings;
   stats?: CoupleStats;
+  status?: string;
+  leftAt?: Timestamp;
+  leftBy?: string;
 }
 
 export interface CoupleSettings {
@@ -301,6 +304,10 @@ export type ActivityType =
   | 'settings_changed'
   | 'couple_joined'
   | 'couple_left'
+  | 'couple_dissolved'
+  | 'couple_invitation_sent'
+  | 'couple_invitation_accepted'
+  | 'couple_invitation_rejected'
   | 'login'
   | 'logout';
 

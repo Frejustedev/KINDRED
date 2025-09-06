@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCouple } from '../../../hooks/useCouple';
 import { useMessages } from '../../../hooks/useMessages';
@@ -37,7 +37,7 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({ navigation }) =>
             const partnerProfile = await AuthService.getUserProfile(partnerId);
             if (partnerProfile) {
               setPartnerInfo({
-                name: partnerProfile.firstName || partnerProfile.displayName || 'Partenaire',
+                name: partnerProfile.firstName || 'Partenaire',
                 email: partnerProfile.email || 'Email inconnu'
               });
             }
@@ -95,8 +95,8 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({ navigation }) =>
     
     // Trier par timestamp et prendre le plus récent
     const sortedMessages = topicMessages.sort((a, b) => {
-      const timeA = a.timestamp?.toDate?.() || new Date(a.timestamp);
-      const timeB = b.timestamp?.toDate?.() || new Date(b.timestamp);
+      const timeA = a.timestamp?.toDate?.() || new Date();
+      const timeB = b.timestamp?.toDate?.() || new Date();
       return timeB.getTime() - timeA.getTime();
     });
     
@@ -116,7 +116,7 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({ navigation }) =>
     const lastMessage = getLastMessage(topic);
     const unreadCount = getUnreadCountForTopic(topic);
     
-    const lastMessageTime = lastMessage?.timestamp?.toDate?.() || new Date(lastMessage?.timestamp || Date.now());
+    const lastMessageTime = lastMessage?.timestamp?.toDate?.() || new Date();
     const timeString = lastMessageTime.toLocaleTimeString('fr-FR', { 
       hour: '2-digit', 
       minute: '2-digit' 
@@ -151,7 +151,11 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({ navigation }) =>
         </View>
         
         {lastMessage ? (
-          <Text style={styles.lastMessage} numberOfLines={2}>
+          <Text 
+            style={styles.lastMessage} 
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {lastMessage.content}
           </Text>
         ) : (
@@ -362,7 +366,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   quickActionIcon: {
     fontSize: 32,
@@ -405,7 +409,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   topicHeader: {
     flexDirection: 'row',
@@ -474,7 +478,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   statNumber: {
     fontSize: 24,

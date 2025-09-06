@@ -29,7 +29,10 @@ export const ActivityLogsProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   // Charger les logs d'activité
   const loadActivityLogs = async () => {
+    console.log('Loading activity logs, couple:', couple);
+    
     if (!couple?.id) {
+      console.log('No couple ID found, skipping activity logs loading');
       setActivityLogs([]);
       setIsLoading(false);
       return;
@@ -38,7 +41,9 @@ export const ActivityLogsProvider: React.FC<{ children: ReactNode }> = ({ childr
     try {
       setIsLoading(true);
       setError(null);
+      console.log('Fetching activity logs for couple:', couple.id);
       const logsData = await ActivityLogService.getCoupleActivityLogs(couple.id);
+      console.log('Activity logs loaded:', logsData.length, 'logs');
       setActivityLogs(logsData);
     } catch (error: any) {
       console.error('Error loading activity logs:', error);

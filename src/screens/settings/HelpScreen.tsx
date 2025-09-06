@@ -8,7 +8,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../constants/colors';
+import { colors, shadowStyles } from '../../constants/colors';
 import { Header } from '../../components/common/Header';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -347,7 +347,7 @@ export const HelpScreen: React.FC<HelpScreenProps> = ({ navigation }) => {
 
         {/* Version */}
         <View style={styles.section}>
-          <Text style={styles.versionText}>Version 1.0.0</Text>
+          <Text style={styles.versionText}>Version 1.01 du 06/09/25</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   introTitle: {
     fontSize: 24,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   featureTitle: {
     fontSize: 18,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   faqHeader: {
     flexDirection: 'row',
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   tipItem: {
     flexDirection: 'row',
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   supportButton: {
     flexDirection: 'row',

@@ -8,7 +8,9 @@ export class EncryptionService {
   // Générer une clé de chiffrement pour le couple
   static async generateCoupleKey(): Promise<string> {
     const randomBytes = await Crypto.getRandomBytesAsync(32);
-    return btoa(String.fromCharCode(...new Uint8Array(randomBytes)));
+    // Convertir Uint8Array en base64 sans Buffer
+    const base64 = btoa(String.fromCharCode(...randomBytes));
+    return base64;
   }
 
   // Sauvegarder la clé de chiffrement

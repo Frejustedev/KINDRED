@@ -45,10 +45,8 @@ export class NotificationService {
       if (!Device.isDevice) return null;
 
       // Désactiver les notifications push dans Expo Go pour éviter les erreurs
-      if (__DEV__) {
-        console.log('Notifications push désactivées en mode développement');
-        return null;
-      }
+      console.log('Notifications push désactivées en mode développement');
+      return null;
 
       const token = await Notifications.getExpoPushTokenAsync({
         projectId: 'kindred-app-8aa97', // Project ID Firebase
@@ -210,7 +208,23 @@ export class NotificationService {
     }
   }
 
-
+  // Annuler le rappel quotidien
+  static async cancelDailyReminder(): Promise<void> {
+    try {
+      // Récupérer toutes les notifications programmées
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      
+      // Trouver et annuler les rappels quotidiens
+      for (const notification of scheduledNotifications) {
+        if (notification.content.data?.type === 'daily_reminder') {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        }
+      }
+    } catch (error) {
+      console.error('Error canceling daily reminder:', error);
+      throw error;
+    }
+  }
 
   // Annuler une notification
   static async cancelNotification(identifier: string): Promise<void> {
@@ -246,6 +260,15 @@ export class NotificationService {
       await Notifications.setBadgeCountAsync(count);
     } catch (error) {
       console.error('Error setting badge count:', error);
+    }
+  }
+
+  // Effacer le badge
+  static async clearBadge(): Promise<void> {
+    try {
+      await Notifications.setBadgeCountAsync(0);
+    } catch (error) {
+      console.error('Error clearing badge:', error);
     }
   }
 

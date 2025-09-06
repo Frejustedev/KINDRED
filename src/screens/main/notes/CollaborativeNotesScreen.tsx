@@ -38,12 +38,6 @@ export const CollaborativeNotesScreen: React.FC<CollaborativeNotesScreenProps> =
     content: '',
   });
 
-  useEffect(() => {
-    if (couple) {
-      loadNotes();
-    }
-  }, [couple, loadNotes]);
-
   const loadNotes = useCallback(async (retryCount = 0) => {
     if (!couple) return;
 
@@ -64,6 +58,12 @@ export const CollaborativeNotesScreen: React.FC<CollaborativeNotesScreenProps> =
       setIsLoading(false);
     }
   }, [couple]);
+
+  useEffect(() => {
+    if (couple) {
+      loadNotes();
+    }
+  }, [couple, loadNotes]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);

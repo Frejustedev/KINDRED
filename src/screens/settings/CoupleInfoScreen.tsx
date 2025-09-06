@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../constants/colors';
+import { colors, shadowStyles } from '../../constants/colors';
 import { Header } from '../../components/common/Header';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
@@ -26,11 +26,13 @@ interface CoupleMember {
   displayName: string;
   email: string;
   isCurrentUser: boolean;
+  lastSeen?: Date;
+  isOnline?: boolean;
 }
 
 export const CoupleInfoScreen: React.FC<CoupleInfoScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
-  const { couple, generateInviteCode } = useCouple();
+  const { couple, generateInviteCode, leaveCouple } = useCouple();
   const [members, setMembers] = useState<CoupleMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
@@ -51,19 +53,30 @@ export const CoupleInfoScreen: React.FC<CoupleInfoScreenProps> = ({ navigation }
       for (const userId of couple.users) {
         try {
           const userProfile = await AuthService.getUserProfile(userId);
+          
+          // Pour l'utilisateur actuel, il est toujours "en ligne"
+          const isCurrentUser = userId === user?.uid;
+          const isOnline = isCurrentUser ? true : false; // Les autres utilisateurs sont considérés hors ligne par défaut
+          const lastSeen = isCurrentUser ? new Date() : userProfile?.lastSeen?.toDate?.() || new Date(Date.now() - 24 * 60 * 60 * 1000); // 24h ago par défaut
+          
           membersData.push({
             id: userId,
-            displayName: userProfile?.firstName || userProfile?.displayName || 'Utilisateur',
+            displayName: userProfile?.firstName || 'Utilisateur',
             email: userProfile?.email || 'Email inconnu',
-            isCurrentUser: userId === user?.uid,
+            isCurrentUser,
+            isOnline,
+            lastSeen,
           });
         } catch (error) {
           console.error('Error fetching user profile:', error);
+          const isCurrentUser = userId === user?.uid;
           membersData.push({
             id: userId,
             displayName: 'Utilisateur inconnu',
             email: 'Email inconnu',
-            isCurrentUser: userId === user?.uid,
+            isCurrentUser,
+            isOnline: isCurrentUser,
+            lastSeen: new Date(Date.now() - 24 * 60 * 60 * 1000), // 24h ago par défaut
           });
         }
       }
@@ -95,14 +108,29 @@ export const CoupleInfoScreen: React.FC<CoupleInfoScreenProps> = ({ navigation }
   const handleLeaveCouple = () => {
     Alert.alert(
       'Quitter le couple',
-      'Êtes-vous sûr de vouloir quitter ce couple ? Cette action est irréversible.',
+      'Êtes-vous sûr de vouloir quitter ce couple ? Cette action retirera TOUS les membres du couple et le dissoudra définitivement. Cette action est irréversible.',
       [
         { text: 'Annuler', style: 'cancel' },
         { 
-          text: 'Quitter (à venir)', 
+          text: 'Quitter', 
           style: 'destructive',
-          onPress: () => {
-            // Fonctionnalité à implémenter ultérieurement
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await leaveCouple();
+              Alert.alert(
+                'Couple dissous',
+                'Le couple a été dissous. Tous les membres ont été retirés.',
+                [{ 
+                  text: 'OK', 
+                  onPress: () => navigation.navigate('Settings', { screen: 'SettingsHome' })
+                }]
+              );
+            } catch (error: any) {
+              Alert.alert('Erreur', error.message);
+            } finally {
+              setIsLoading(false);
+            }
           }
         }
       ]
@@ -121,28 +149,76 @@ export const CoupleInfoScreen: React.FC<CoupleInfoScreenProps> = ({ navigation }
     </View>
   );
 
-  const renderMemberCard = (member: CoupleMember) => (
-    <View key={member.id} style={styles.memberCard}>
-      <View style={styles.memberAvatar}>
-        <Text style={styles.memberAvatarText}>
-          {member.displayName.charAt(0).toUpperCase()}
-        </Text>
+  const renderMemberCard = (member: CoupleMember) => {
+    const getStatusText = () => {
+      if (member.isCurrentUser) {
+        return 'En ligne (Vous)';
+      }
+      
+      if (member.isOnline) {
+        return 'En ligne';
+      }
+      
+      if (member.lastSeen) {
+        const now = new Date();
+        const diffInMinutes = Math.floor((now.getTime() - member.lastSeen.getTime()) / (1000 * 60));
+        
+        if (diffInMinutes < 5) {
+          return 'À l\'instant';
+        } else if (diffInMinutes < 60) {
+          return `Il y a ${diffInMinutes}min`;
+        } else if (diffInMinutes < 1440) { // 24h
+          const hours = Math.floor(diffInMinutes / 60);
+          return `Il y a ${hours}h`;
+        } else {
+          const days = Math.floor(diffInMinutes / 1440);
+          return `Il y a ${days}j`;
+        }
+      }
+      
+      return 'Hors ligne';
+    };
+
+    const getStatusColor = () => {
+      if (member.isCurrentUser || member.isOnline) {
+        return colors.success;
+      }
+      
+      if (member.lastSeen) {
+        const now = new Date();
+        const diffInMinutes = Math.floor((now.getTime() - member.lastSeen.getTime()) / (1000 * 60));
+        
+        if (diffInMinutes < 60) {
+          return colors.warning; // Récemment en ligne
+        }
+      }
+      
+      return colors.textSecondary; // Hors ligne depuis longtemps
+    };
+
+    return (
+      <View key={member.id} style={styles.memberCard}>
+        <View style={styles.memberAvatar}>
+          <Text style={styles.memberAvatarText}>
+            {member.displayName.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.memberInfo}>
+          <Text style={styles.memberName}>
+            {member.displayName}
+            {member.isCurrentUser && (
+              <Text style={styles.currentUserBadge}> (Vous)</Text>
+            )}
+          </Text>
+          <Text style={styles.memberEmail}>{member.email}</Text>
+        </View>
+        <View style={styles.memberStatus}>
+          <View style={[styles.onlineIndicator, { backgroundColor: getStatusColor() }]} />
+          <Text style={[styles.statusText, { color: getStatusColor() }]}>{getStatusText()}</Text>
+        </View>
       </View>
-      <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>
-          {member.displayName}
-          {member.isCurrentUser && (
-            <Text style={styles.currentUserBadge}> (Vous)</Text>
-          )}
-        </Text>
-        <Text style={styles.memberEmail}>{member.email}</Text>
-      </View>
-      <View style={styles.memberStatus}>
-        <View style={styles.onlineIndicator} />
-        <Text style={styles.statusText}>En ligne</Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -320,14 +396,27 @@ export const CoupleInfoScreen: React.FC<CoupleInfoScreenProps> = ({ navigation }
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Actions</Text>
           
-          <Button
-            title={isGeneratingCode ? "Génération..." : "Générer un code d'invitation"}
-            onPress={handleGenerateInviteCode}
-            variant="primary"
-            style={styles.actionButton}
-            disabled={isGeneratingCode}
-            icon={isGeneratingCode ? undefined : "ticket-outline"}
-          />
+          {/* Afficher le code d'invitation seulement si le couple n'est pas complet */}
+          {members.length < 2 && (
+            <Button
+              title={isGeneratingCode ? "Génération..." : "Générer un code d'invitation"}
+              onPress={handleGenerateInviteCode}
+              variant="primary"
+              style={styles.actionButton}
+              disabled={isGeneratingCode}
+              icon={isGeneratingCode ? undefined : "ticket-outline"}
+            />
+          )}
+          
+          {/* Message informatif si le couple est complet */}
+          {members.length >= 2 && (
+            <View style={styles.infoMessage}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={styles.infoMessageText}>
+                Votre couple est complet ! Plus besoin de code d'invitation.
+              </Text>
+            </View>
+          )}
           
           <Button
             title="Gérer les dates marquantes"
@@ -437,7 +526,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   infoIcon: {
     width: 40,
@@ -467,7 +556,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   memberAvatar: {
     width: 48,
@@ -528,7 +617,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   featureText: {
     fontSize: 14,
@@ -547,7 +636,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 4,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   statCardNumber: {
     fontSize: 24,
@@ -569,5 +658,21 @@ const styles = StyleSheet.create({
   },
   leaveButtonText: {
     color: colors.error,
+  },
+  infoMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.success + '20',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  infoMessageText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.success,
+    fontWeight: '500',
+    marginLeft: 8,
   },
 });

@@ -12,7 +12,7 @@ export class RecurringEventService {
 
     const instances: AgendaEvent[] = [];
     const config = baseEvent.recurring;
-    const eventStart = baseEvent.startDate.toDate();
+    const eventStart = baseEvent.startDate?.toDate?.() || new Date();
     
     let currentDate = new Date(Math.max(eventStart.getTime(), startDate.getTime()));
     const maxDate = endDate;
@@ -38,7 +38,9 @@ export class RecurringEventService {
 
         // Ajuster l'heure de fin si nécessaire
         if (baseEvent.endDate) {
-          const originalDuration = baseEvent.endDate.toDate().getTime() - baseEvent.startDate.toDate().getTime();
+          const endDate = baseEvent.endDate?.toDate?.() || new Date();
+          const startDate = baseEvent.startDate?.toDate?.() || new Date();
+          const originalDuration = endDate.getTime() - startDate.getTime();
           instance.endDate = Timestamp.fromDate(new Date(currentDate.getTime() + originalDuration));
         }
 

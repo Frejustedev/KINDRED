@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
+import { colors, shadowStyles } from '../constants/colors';
 import { useMessages } from '../hooks/useMessages';
 import { HomeScreen } from '../screens/main/home/HomeScreen';
 import { MessagesScreen } from '../screens/main/messages/MessagesScreen';
@@ -37,7 +37,10 @@ const SettingsStack = createNativeStackNavigator();
 
 // Stack pour les messages
 const MessagesStackNavigator = () => (
-  <MessagesStack.Navigator screenOptions={{ headerShown: false }}>
+  <MessagesStack.Navigator 
+    screenOptions={{ headerShown: false }}
+    initialRouteName="Conversations"
+  >
     <MessagesStack.Screen name="Conversations" component={ConversationsScreen} />
     <MessagesStack.Screen name="Chat" component={ChatScreen} />
     <MessagesStack.Screen name="MessagesList" component={MessagesScreen} />
@@ -47,7 +50,10 @@ const MessagesStackNavigator = () => (
 
 // Stack pour l'organisation (Agenda, Listes, Notes, Dates marquantes)
 const OrganizationStackNavigator = () => (
-  <OrganizationStack.Navigator screenOptions={{ headerShown: false }}>
+  <OrganizationStack.Navigator 
+    screenOptions={{ headerShown: false }}
+    initialRouteName="OrganizationHome"
+  >
     <OrganizationStack.Screen name="OrganizationHome" component={OrganizationScreen} />
     <OrganizationStack.Screen name="Agenda" component={AgendaScreen} />
     <OrganizationStack.Screen name="SharedLists" component={SharedListsScreen} />
@@ -62,7 +68,10 @@ const OrganizationStackNavigator = () => (
 
 // Stack pour les finances (Budget uniquement)
 const FinanceStackNavigator = () => (
-  <FinanceStack.Navigator screenOptions={{ headerShown: false }}>
+  <FinanceStack.Navigator 
+    screenOptions={{ headerShown: false }}
+    initialRouteName="FinanceHome"
+  >
     <FinanceStack.Screen name="FinanceHome" component={FinanceScreen} />
     <FinanceStack.Screen name="Budget" component={BudgetScreen} />
     <FinanceStack.Screen name="BudgetStats" component={BudgetStatsScreen} />
@@ -71,7 +80,10 @@ const FinanceStackNavigator = () => (
 
 // Stack pour les paramètres
 const SettingsStackNavigator = () => (
-  <SettingsStack.Navigator screenOptions={{ headerShown: false }}>
+  <SettingsStack.Navigator 
+    screenOptions={{ headerShown: false }}
+    initialRouteName="SettingsHome"
+  >
     <SettingsStack.Screen name="SettingsHome" component={SettingsScreen} />
     <SettingsStack.Screen name="CoupleInfo" component={CoupleInfoScreen} />
     <SettingsStack.Screen name="ActivityLogs" component={ActivityLogsScreen} />
@@ -130,6 +142,7 @@ const TabIcon: React.FC<{ name: string; focused: boolean }> = ({ name, focused }
 export const MainNavigator: React.FC = () => {
   return (
     <Tab.Navigator
+      initialRouteName="Home"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused }) => (
           <TabIcon name={route.name} focused={focused} />
@@ -144,36 +157,60 @@ export const MainNavigator: React.FC = () => {
         name="Messages"
         component={MessagesStackNavigator}
         options={{
-          tabBarLabel: '',
+          tabBarLabel: () => <></>,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Réinitialiser la stack Messages vers l'écran principal
+            navigation.navigate('Messages', { screen: 'Conversations' });
+          },
+        })}
       />
       <Tab.Screen
         name="Organization"
         component={OrganizationStackNavigator}
         options={{
-          tabBarLabel: '',
+          tabBarLabel: () => <></>,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Réinitialiser la stack Organization vers l'écran principal
+            navigation.navigate('Organization', { screen: 'OrganizationHome' });
+          },
+        })}
       />
       <Tab.Screen
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: '',
+          tabBarLabel: () => <></>,
         }}
       />
       <Tab.Screen
         name="Finance"
         component={FinanceStackNavigator}
         options={{
-          tabBarLabel: '',
+          tabBarLabel: () => <></>,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Réinitialiser la stack Finance vers l'écran principal
+            navigation.navigate('Finance', { screen: 'FinanceHome' });
+          },
+        })}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsStackNavigator}
         options={{
-          tabBarLabel: '',
+          tabBarLabel: () => <></>,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Réinitialiser la stack Settings vers l'écran principal
+            navigation.navigate('Settings', { screen: 'SettingsHome' });
+          },
+        })}
       />
     </Tab.Navigator>
   );
@@ -187,7 +224,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     height: 75,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   iconContainer: {
     alignItems: 'center',

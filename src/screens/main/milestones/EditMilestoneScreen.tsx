@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Header } from '../../../components/common/Header';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
@@ -24,11 +24,7 @@ import { Timestamp } from 'firebase/firestore';
 
 interface EditMilestoneScreenProps {
   navigation: any;
-  route: {
-    params: {
-      milestoneId: string;
-    };
-  };
+  route: any;
 }
 
 export const EditMilestoneScreen: React.FC<EditMilestoneScreenProps> = ({ navigation, route }) => {
@@ -448,7 +444,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   typeSelectorContent: {
     flexDirection: 'row',
@@ -486,7 +482,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   dateInfo: {
     flexDirection: 'row',

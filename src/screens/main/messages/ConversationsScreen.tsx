@@ -32,7 +32,7 @@ interface TopicItem {
 }
 
 export const ConversationsScreen: React.FC<ConversationsScreenProps> = ({ navigation }) => {
-  const { availableTopics, addTopic, updateTopic, deleteTopic, conversationsInfo, refreshConversations } = useMessages();
+  const { availableTopics, addTopic, updateTopic, deleteTopic, clearTopicMessages, conversationsInfo, refreshConversations } = useMessages();
   const { user } = useAuth();
   const { couple } = useCouple();
   const [partnerInfo, setPartnerInfo] = useState<{ name: string; email: string; lastSeen?: Date; isOnline?: boolean } | null>(null);
@@ -142,6 +142,28 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = ({ naviga
     );
   };
 
+  const handleClearMessages = (topicId: string, displayName: string) => {
+    Alert.alert(
+      'Effacer tous les messages',
+      `Êtes-vous sûr de vouloir effacer tous les messages de "${displayName}" ?\n\nCette action est irréversible et supprimera définitivement tous les messages.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Effacer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearTopicMessages(topicId);
+              Alert.alert('Succès', 'Tous les messages ont été effacés');
+            } catch (error: any) {
+              Alert.alert('Erreur', error.message || 'Impossible d\'effacer les messages');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const openEditModal = (topicName: string) => {
     setEditingTopic(topicName);
     setNewTopicName(topicName);
@@ -202,7 +224,11 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = ({ naviga
             )}
           </View>
           
-          <Text style={styles.topicLastMessage}>
+          <Text 
+            style={styles.topicLastMessage}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {item.lastMessage || 'Aucun message'}
           </Text>
         </View>
@@ -214,22 +240,31 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = ({ naviga
         )}
       </TouchableOpacity>
 
-      {!item.isMain && (
-        <View style={styles.topicActions}>
+      <View style={styles.topicActions}>
+        {item.isMain ? (
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => openEditModal(item.name)}
+            onPress={() => handleClearMessages(item.id, item.name)}
           >
-            <Ionicons name="pencil" size={16} color={colors.primary} />
+            <Ionicons name="trash-outline" size={16} color={colors.warning} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleDeleteTopic(item.name)}
-          >
-            <Ionicons name="trash" size={16} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-      )}
+        ) : (
+          <>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => openEditModal(item.id)}
+            >
+              <Ionicons name="pencil" size={16} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleDeleteTopic(item.id)}
+            >
+              <Ionicons name="trash" size={16} color={colors.error} />
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </View>
   );
 
@@ -561,6 +596,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     lineHeight: 18,
+    flex: 1,
   },
   unreadBadge: {
     backgroundColor: colors.primary,

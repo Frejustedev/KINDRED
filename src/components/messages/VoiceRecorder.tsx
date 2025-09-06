@@ -7,7 +7,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { colors } from '../../constants/colors';
+import { colors, shadowStyles } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import { Audio } from 'expo-av';
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     margin: 20,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   header: {
     flexDirection: 'row',

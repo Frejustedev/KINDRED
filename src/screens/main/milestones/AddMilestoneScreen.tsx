@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Header } from '../../../components/common/Header';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderWidth: 2,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   typeOptionSelected: {
     borderWidth: 2,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   dateInfo: {
     flexDirection: 'row',
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   typeSelectorContent: {
     flexDirection: 'row',

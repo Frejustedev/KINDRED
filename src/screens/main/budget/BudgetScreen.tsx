@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
 import { Header } from '../../../components/common/Header';
@@ -41,7 +41,8 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     addCategory,
     updateCategory,
     deleteCategory,
-    clearError 
+    clearError,
+    refreshTransactions
   } = useBudget();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -116,7 +117,7 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         description: '',
       });
       
-      await loadMonthTransactions();
+      await refreshTransactions();
       Alert.alert('Succès', 'Transaction ajoutée avec succès');
     } catch (error: any) {
       console.error('Error creating transaction:', error);
@@ -139,7 +140,7 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     return { totalIncome, totalExpenses, balance };
   };
 
-  const handleAddCustomCategory = () => {
+  const handleAddCustomCategory = async () => {
     if (!newCategory.trim()) {
       Alert.alert('Erreur', 'Veuillez saisir un nom de catégorie');
       return;
@@ -156,7 +157,7 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       return;
     }
 
-    setCustomCategories([...customCategories, categoryName]);
+    await addCategory(categoryName);
     setNewCategory('');
     setShowCategoryModal(false);
     Alert.alert('Succès', 'Catégorie ajoutée avec succès');
@@ -168,7 +169,7 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     setShowCategoryModal(true);
   };
 
-  const handleUpdateCategory = () => {
+  const handleUpdateCategory = async () => {
     if (!editingCategory || !newCategory.trim()) {
       Alert.alert('Erreur', 'Veuillez saisir un nom de catégorie');
       return;
@@ -192,13 +193,10 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     // Si c'est une catégorie par défaut, on l'ajoute aux personnalisées et on la supprime des par défaut
     if (defaultCategories.includes(editingCategory)) {
       setDeletedDefaultCategories([...deletedDefaultCategories, editingCategory]);
-      setCustomCategories([...customCategories, newName]);
+      await addCategory(newName);
     } else {
       // Sinon, c'est une catégorie personnalisée, on la met à jour
-      const updatedCategories = customCategories.map(cat => 
-        cat === editingCategory ? newName : cat
-      );
-      setCustomCategories(updatedCategories);
+      await updateCategory(editingCategory, newName);
     }
 
     // Mettre à jour la catégorie sélectionnée si elle était en cours d'édition
@@ -224,14 +222,13 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         {
           text: 'Supprimer',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             if (isDefaultCategory) {
               // Pour une catégorie par défaut, on l'ajoute à la liste des supprimées
               setDeletedDefaultCategories([...deletedDefaultCategories, categoryName]);
             } else {
               // Pour une catégorie personnalisée, on la supprime de la liste
-              const updatedCategories = customCategories.filter(cat => cat !== categoryName);
-              setCustomCategories(updatedCategories);
+              await deleteCategory(categoryName);
             }
             
             // Si la catégorie supprimée était sélectionnée, trouver une alternative
@@ -305,7 +302,7 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
           onPress: async () => {
             try {
               await FirestoreService.deleteTransaction(couple.id, transactionId);
-              await loadMonthTransactions();
+              await refreshTransactions();
               Alert.alert('Succès', 'Transaction supprimée avec succès');
             } catch (error: any) {
               console.error('Error deleting transaction:', error);
@@ -378,7 +375,7 @@ export const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       <Text style={styles.errorStateText}>{error}</Text>
       <Button
         title="Réessayer"
-        onPress={() => loadMonthTransactions()}
+        onPress={() => refreshTransactions()}
         style={styles.retryButton}
       />
     </View>
@@ -897,7 +894,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   statLabel: {
     fontSize: 12,
@@ -973,7 +970,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   transactionHeader: {
     flexDirection: 'row',

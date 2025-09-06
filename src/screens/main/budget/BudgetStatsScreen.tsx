@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCouple } from '../../../hooks/useCouple';
 import { FirestoreService } from '../../../services/firebase/firestore.service';
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   summaryLabel: {
     fontSize: 12,
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   categoryInfo: {
     flexDirection: 'row',
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   monthlyLabel: {
     fontSize: 16,

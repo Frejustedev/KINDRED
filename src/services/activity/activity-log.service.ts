@@ -195,20 +195,20 @@ export class ActivityLogService {
       const notificationTitle = this.getNotificationTitle(activityType);
       const notificationBody = description;
 
-      await NotificationService.scheduleLocalNotification({
-        title: notificationTitle,
-        body: notificationBody,
-        data: {
+      await NotificationService.scheduleLocalNotification(
+        notificationTitle,
+        notificationBody,
+        {
           type: 'activity_log',
           activityType,
           coupleId,
           userId
         },
-        trigger: {
+        {
           date: new Date(Date.now() + 1000), // Notification immédiate
           type: 'date' as any
         }
-      });
+      );
     } catch (error) {
       console.error('Error sending activity notification:', error);
       // Ne pas faire échouer la création du log si la notification échoue
@@ -242,6 +242,10 @@ export class ActivityLogService {
       settings_changed: 'Paramètres modifiés',
       couple_joined: 'Nouveau membre',
       couple_left: 'Membre parti',
+      couple_dissolved: 'Couple dissous',
+      couple_invitation_sent: 'Invitation envoyée',
+      couple_invitation_accepted: 'Invitation acceptée',
+      couple_invitation_rejected: 'Invitation refusée',
       login: 'Connexion',
       logout: 'Déconnexion'
     };

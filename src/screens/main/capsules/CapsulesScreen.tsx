@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Header } from '../../../components/common/Header';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
@@ -768,7 +768,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    ...colors.shadow,
+    ...shadowStyles,
   },
   statLabel: {
     fontSize: 12,
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   capsuleHeader: {
     flexDirection: 'row',
@@ -1090,7 +1090,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
     zIndex: 1000,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   timeUnitItem: {
     flexDirection: 'row',

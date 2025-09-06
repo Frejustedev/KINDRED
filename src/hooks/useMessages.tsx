@@ -28,6 +28,7 @@ interface MessagesContextType {
   addTopic: (topicName: string) => Promise<void>;
   updateTopic: (oldTopicName: string, newTopicName: string) => Promise<void>;
   deleteTopic: (topicName: string) => Promise<void>;
+  clearTopicMessages: (topicName: string) => Promise<void>;
   clearError: () => void;
   conversationsInfo: ConversationInfo[];
   totalUnreadCount: number;
@@ -294,9 +295,44 @@ export const MessagesProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     try {
       setError(null);
+      
+      // Vérifier que le topic existe localement
+      if (!availableTopics.includes(topicName)) {
+        throw new Error(`Le topic "${topicName}" n'existe pas dans la liste locale. Topics disponibles: ${availableTopics.join(', ')}`);
+      }
+      
+      console.log('Suppression du topic:', topicName);
+      console.log('Topics disponibles localement:', availableTopics);
+      
       await FirestoreService.deleteTopic(couple.id, topicName);
-      // Le topic sera automatiquement supprimé via le couple
+      
+      // Si le topic supprimé était le topic actuel, revenir au topic général
+      if (currentTopic === topicName) {
+        setCurrentTopic('général');
+      }
+      
+      console.log('Topic supprimé avec succès');
     } catch (error: any) {
+      console.error('Erreur lors de la suppression du topic:', error);
+      setError(error.message);
+      throw error;
+    }
+  };
+
+  // Effacer tous les messages d'un topic
+  const clearTopicMessages = async (topicName: string) => {
+    if (!couple) throw new Error('Couple non disponible');
+
+    try {
+      setError(null);
+      
+      console.log('Effacement des messages du topic:', topicName);
+      
+      await FirestoreService.clearTopicMessages(couple.id, topicName);
+      
+      console.log('Messages effacés avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'effacement des messages:', error);
       setError(error.message);
       throw error;
     }
@@ -343,6 +379,7 @@ export const MessagesProvider: React.FC<{ children: ReactNode }> = ({ children }
     addTopic,
     updateTopic,
     deleteTopic,
+    clearTopicMessages,
     clearError,
     conversationsInfo,
     totalUnreadCount,

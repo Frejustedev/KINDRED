@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../constants/colors';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCouple } from '../../../hooks/useCouple';
-import { FirestoreService } from '../../../services/firebase/firestore.service';
+import { useMessages } from '../../../hooks/useMessages';
 
 interface TopicManagementScreenProps {
   navigation: any;
@@ -35,31 +35,19 @@ interface Topic {
 export const TopicManagementScreen: React.FC<TopicManagementScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
   const { couple } = useCouple();
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const { availableTopics, addTopic, updateTopic, deleteTopic, clearTopicMessages } = useMessages();
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
+  const [editingTopic, setEditingTopic] = useState<string | null>(null);
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDescription, setNewTopicDescription] = useState('');
 
   const loadTopics = useCallback(async () => {
-    if (!couple) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const topicsData = await FirestoreService.getTopics(couple.id);
-      setTopics(topicsData);
-    } catch (error: any) {
-      console.error('Error loading topics:', error);
-      setError(error.message || 'Impossible de charger les topics');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [couple]);
+    // Les topics sont maintenant gérés par le hook useMessages
+    setIsLoading(false);
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -74,28 +62,16 @@ export const TopicManagementScreen: React.FC<TopicManagementScreenProps> = ({ na
   }, [couple, loadTopics]);
 
   const handleAddTopic = async () => {
-    if (!couple || !user) {
-      Alert.alert('Erreur', 'Vous devez être connecté et faire partie d\'un couple');
-      return;
-    }
-
     if (!newTopicName.trim()) {
       Alert.alert('Erreur', 'Le nom du topic est requis');
       return;
     }
 
     try {
-      await FirestoreService.createTopic(couple.id, {
-        name: newTopicName.trim(),
-        description: newTopicDescription.trim(),
-        createdBy: user.uid,
-        isDefault: false,
-      });
-
+      await addTopic(newTopicName.trim());
       setNewTopicName('');
       setNewTopicDescription('');
       setShowAddModal(false);
-      await loadTopics();
       Alert.alert('Succès', 'Topic créé avec succès');
     } catch (error: any) {
       console.error('Error creating topic:', error);
@@ -110,15 +86,10 @@ export const TopicManagementScreen: React.FC<TopicManagementScreenProps> = ({ na
     }
 
     try {
-      await FirestoreService.updateTopic(couple!.id, editingTopic.id, {
-        name: newTopicName.trim(),
-        description: newTopicDescription.trim(),
-      });
-
+      await updateTopic(editingTopic, newTopicName.trim());
       setEditingTopic(null);
       setNewTopicName('');
       setNewTopicDescription('');
-      await loadTopics();
       Alert.alert('Succès', 'Topic modifié avec succès');
     } catch (error: any) {
       console.error('Error updating topic:', error);
@@ -126,15 +97,15 @@ export const TopicManagementScreen: React.FC<TopicManagementScreenProps> = ({ na
     }
   };
 
-  const handleDeleteTopic = (topic: Topic) => {
-    if (topic.isDefault) {
+  const handleDeleteTopic = (topicName: string) => {
+    if (topicName === 'général') {
       Alert.alert('Erreur', 'Le topic principal ne peut pas être supprimé');
       return;
     }
 
     Alert.alert(
       'Confirmer la suppression',
-      `Êtes-vous sûr de vouloir supprimer le topic "${topic.name}" ? Cette action est irréversible.`,
+      `Êtes-vous sûr de vouloir supprimer le topic "${topicName}" ? Cette action est irréversible.`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -142,8 +113,7 @@ export const TopicManagementScreen: React.FC<TopicManagementScreenProps> = ({ na
           style: 'destructive',
           onPress: async () => {
             try {
-              await FirestoreService.deleteTopic(couple!.id, topic.id);
-              await loadTopics();
+              await deleteTopic(topicName);
               Alert.alert('Succès', 'Topic supprimé avec succès');
             } catch (error: any) {
               console.error('Error deleting topic:', error);
@@ -155,44 +125,72 @@ export const TopicManagementScreen: React.FC<TopicManagementScreenProps> = ({ na
     );
   };
 
-  const openEditModal = (topic: Topic) => {
-    setEditingTopic(topic);
-    setNewTopicName(topic.name);
-    setNewTopicDescription(topic.description);
+  const handleClearMessages = (topicName: string) => {
+    Alert.alert(
+      'Effacer tous les messages',
+      `Êtes-vous sûr de vouloir effacer tous les messages du topic "${topicName}" ?\n\nCette action est irréversible et supprimera définitivement tous les messages.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Effacer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearTopicMessages(topicName);
+              Alert.alert('Succès', 'Tous les messages ont été effacés');
+            } catch (error: any) {
+              console.error('Error clearing messages:', error);
+              Alert.alert('Erreur', error.message || 'Impossible d\'effacer les messages');
+            }
+          },
+        },
+      ]
+    );
   };
 
-  const renderTopicCard = (topic: Topic) => (
-    <View key={topic.id} style={styles.topicCard}>
+  const openEditModal = (topicName: string) => {
+    setEditingTopic(topicName);
+    setNewTopicName(topicName);
+    setNewTopicDescription('');
+  };
+
+  const renderTopicCard = (topicName: string) => (
+    <View key={topicName} style={styles.topicCard}>
       <View style={styles.topicHeader}>
         <View style={styles.topicInfo}>
           <Text style={styles.topicName}>
-            {topic.name}
-            {topic.isDefault && (
+            {topicName}
+            {topicName === 'général' && (
               <Text style={styles.defaultBadge}> Principal</Text>
             )}
           </Text>
-          <Text style={styles.topicDescription}>{topic.description}</Text>
-          <Text style={styles.topicStats}>
-            {topic.messageCount} message{topic.messageCount > 1 ? 's' : ''}
-          </Text>
         </View>
         
-        {!topic.isDefault && (
-          <View style={styles.topicActions}>
+        <View style={styles.topicActions}>
+          {topicName === 'général' ? (
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => openEditModal(topic)}
+              onPress={() => handleClearMessages(topicName)}
             >
-              <Ionicons name="pencil" size={20} color={colors.info} />
+              <Ionicons name="trash-outline" size={20} color={colors.warning} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleDeleteTopic(topic)}
-            >
-              <Ionicons name="trash" size={20} color={colors.error} />
-            </TouchableOpacity>
-          </View>
-        )}
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => openEditModal(topicName)}
+              >
+                <Ionicons name="pencil" size={20} color={colors.info} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleDeleteTopic(topicName)}
+              >
+                <Ionicons name="trash" size={20} color={colors.error} />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -264,8 +262,8 @@ export const TopicManagementScreen: React.FC<TopicManagementScreenProps> = ({ na
             </View>
 
             <View style={styles.topicsContainer}>
-              {topics.length > 0 ? (
-                topics.map(renderTopicCard)
+              {availableTopics.length > 0 ? (
+                availableTopics.map(renderTopicCard)
               ) : (
                 <View style={styles.emptyState}>
                   <Ionicons name="chatbubbles-outline" size={48} color={colors.textLight} />

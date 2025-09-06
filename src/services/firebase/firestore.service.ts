@@ -73,7 +73,12 @@ export class FirestoreService {
     pin: string
   ): Promise<string> {
     try {
+      console.log('🔍 Début création couple...');
+      console.log('👤 User ID:', userId1);
+      console.log('📧 Partner Email:', partnerEmail);
+      
       // Vérifier que l'email du partenaire n'est pas celui de l'utilisateur actuel
+      console.log('🔍 Lecture profil utilisateur actuel...');
       const currentUserDoc = await getDoc(doc(db, 'users', userId1));
       if (!currentUserDoc.exists()) {
         throw new Error('Utilisateur actuel non trouvé');
@@ -84,12 +89,21 @@ export class FirestoreService {
         throw new Error('Vous ne pouvez pas vous inviter vous-même');
       }
 
+      // Vérifier que l'utilisateur actuel n'est pas déjà dans un couple
+      if (currentUserData.coupledWith) {
+        throw new Error('Vous êtes déjà dans un couple');
+      }
+
       // Vérifier que l'email du partenaire correspond à un utilisateur existant
+      console.log('🔍 Recherche partenaire par email...');
       const usersQuery = query(
         collection(db, 'users'),
         where('email', '==', partnerEmail.toLowerCase())
       );
+      console.log('🔍 Exécution requête...');
       const partnerSnapshot = await getDocs(usersQuery);
+      
+      console.log('📊 Résultats recherche:', partnerSnapshot.size, 'utilisateurs trouvés');
       
       if (partnerSnapshot.empty) {
         throw new Error('Aucun utilisateur trouvé avec cette adresse email');
@@ -108,11 +122,11 @@ export class FirestoreService {
       const hashedPin = await EncryptionService.hashPin(pin);
       
       const coupleData: Partial<Couple> = {
-        users: [userId1, partnerId], // Ajouter directement les deux utilisateurs
+        users: [userId1], // Ajouter seulement le créateur du couple
         pin: hashedPin,
         startDate: serverTimestamp() as Timestamp,
         createdAt: serverTimestamp() as Timestamp,
-        topics: ['général', 'voyage', 'budget', 'surprises'],
+        topics: ['général'],
         settings: {
           currencySymbol: '€',
           timezone: 'Europe/Paris',
@@ -128,11 +142,21 @@ export class FirestoreService {
 
       const coupleRef = await addDoc(collection(db, 'couples'), coupleData);
       
-      // Mettre à jour les profils des deux utilisateurs
-      const batch = writeBatch(db);
-      batch.update(doc(db, 'users', userId1), { coupledWith: coupleRef.id });
-      batch.update(doc(db, 'users', partnerId), { coupledWith: coupleRef.id });
-      await batch.commit();
+      // Mettre à jour seulement le profil du créateur
+      await updateDoc(doc(db, 'users', userId1), { coupledWith: coupleRef.id });
+
+      // Créer une invitation pour le partenaire
+      const invitationData = {
+        fromUserId: userId1,
+        toUserId: partnerId,
+        toUserEmail: partnerEmail.toLowerCase(),
+        coupleId: coupleRef.id,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+      };
+      
+      await addDoc(collection(db, 'couple_invitations'), invitationData);
 
       // Créer automatiquement la date d'installation de l'app
       try {
@@ -152,7 +176,469 @@ export class FirestoreService {
     }
   }
 
-  // Rejoindre un couple existant
+  // Accepter une invitation de couple
+  static async acceptCoupleInvitation(
+    userId: string,
+    invitationId: string
+  ): Promise<string> {
+    try {
+      console.log('🤝 Acceptation invitation couple...');
+      
+      // Récupérer l'invitation
+      const invitationDoc = await getDoc(doc(db, 'couple_invitations', invitationId));
+      if (!invitationDoc.exists()) {
+        throw new Error('Invitation introuvable');
+      }
+      
+      const invitationData = invitationDoc.data();
+      
+      // Vérifier que l'invitation est pour cet utilisateur
+      if (invitationData.toUserId !== userId) {
+        throw new Error('Cette invitation ne vous est pas destinée');
+      }
+      
+      // Vérifier que l'invitation est encore valide
+      if (invitationData.status !== 'pending') {
+        throw new Error('Cette invitation n\'est plus valide');
+      }
+      
+      // Vérifier que l'invitation n'a pas expiré
+      const expiresAt = invitationData.expiresAt.toDate();
+      if (expiresAt < new Date()) {
+        throw new Error('Cette invitation a expiré');
+      }
+      
+      // Vérifier que l'utilisateur n'est pas déjà dans un couple
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (!userDoc.exists()) {
+        throw new Error('Utilisateur introuvable');
+      }
+      
+      const userData = userDoc.data();
+      if (userData.coupledWith) {
+        throw new Error('Vous êtes déjà dans un couple');
+      }
+      
+      const coupleId = invitationData.coupleId;
+      
+      // Ajouter l'utilisateur au couple
+      const coupleDoc = await getDoc(doc(db, 'couples', coupleId));
+      if (!coupleDoc.exists()) {
+        throw new Error('Couple introuvable');
+      }
+      
+      const coupleData = coupleDoc.data();
+      const updatedUsers = [...(coupleData.users || []), userId];
+      
+      // Utiliser une transaction pour garantir la cohérence
+      const batch = writeBatch(db);
+      
+      // Mettre à jour le couple
+      batch.update(doc(db, 'couples', coupleId), {
+        users: updatedUsers
+      });
+      
+      // Mettre à jour le profil utilisateur
+      batch.update(doc(db, 'users', userId), {
+        coupledWith: coupleId
+      });
+      
+      // Marquer l'invitation comme acceptée
+      batch.update(doc(db, 'couple_invitations', invitationId), {
+        status: 'accepted',
+        acceptedAt: serverTimestamp()
+      });
+      
+      await batch.commit();
+      
+      console.log('✅ Invitation acceptée avec succès');
+      return coupleId;
+      
+    } catch (error) {
+      console.error('Error accepting couple invitation:', error);
+      throw error;
+    }
+  }
+
+  // Refuser une invitation de couple
+  static async rejectCoupleInvitation(
+    userId: string,
+    invitationId: string
+  ): Promise<void> {
+    try {
+      console.log('❌ Refus invitation couple...');
+      
+      // Récupérer l'invitation
+      const invitationDoc = await getDoc(doc(db, 'couple_invitations', invitationId));
+      if (!invitationDoc.exists()) {
+        throw new Error('Invitation introuvable');
+      }
+      
+      const invitationData = invitationDoc.data();
+      
+      // Vérifier que l'invitation est pour cet utilisateur
+      if (invitationData.toUserId !== userId) {
+        throw new Error('Cette invitation ne vous est pas destinée');
+      }
+      
+      // Marquer l'invitation comme refusée
+      await updateDoc(doc(db, 'couple_invitations', invitationId), {
+        status: 'rejected',
+        rejectedAt: serverTimestamp()
+      });
+      
+      console.log('✅ Invitation refusée');
+      
+    } catch (error) {
+      console.error('Error rejecting couple invitation:', error);
+      throw error;
+    }
+  }
+
+  // Récupérer les invitations en attente pour un utilisateur
+  static async getPendingInvitations(userId: string): Promise<any[]> {
+    try {
+      const q = query(
+        collection(db, 'couple_invitations'),
+        where('toUserId', '==', userId),
+        where('status', '==', 'pending'),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const invitations = [];
+      
+      for (const docSnapshot of snapshot.docs) {
+        const data = docSnapshot.data();
+        
+        // Récupérer les infos de l'expéditeur
+        const senderDoc = await getDoc(doc(db, 'users', data.fromUserId));
+        const senderData = senderDoc.exists() ? senderDoc.data() : null;
+        
+        invitations.push({
+          id: docSnapshot.id,
+          ...data,
+          sender: senderData
+        });
+      }
+      
+      return invitations;
+    } catch (error) {
+      console.error('Error getting pending invitations:', error);
+      return [];
+    }
+  }
+
+  // Quitter un couple
+  static async leaveCouple(userId: string): Promise<void> {
+    try {
+      console.log('🚪 Début processus de départ du couple...');
+      
+      // Récupérer le profil utilisateur pour obtenir l'ID du couple
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (!userDoc.exists()) {
+        throw new Error('Utilisateur introuvable');
+      }
+      
+      const userData = userDoc.data();
+      const coupleId = userData.coupledWith;
+      
+      if (!coupleId) {
+        throw new Error('Vous n\'êtes pas dans un couple');
+      }
+      
+      // Récupérer les données du couple
+      const coupleDoc = await getDoc(doc(db, 'couples', coupleId));
+      if (!coupleDoc.exists()) {
+        throw new Error('Couple introuvable');
+      }
+      
+      const coupleData = coupleDoc.data();
+      
+      // IMPORTANT: Sauvegarder la liste des membres AVANT de modifier le couple
+      const originalMembers = [...coupleData.users];
+      console.log('👥 Membres originaux à traiter:', originalMembers.length, '-', JSON.stringify(originalMembers));
+      
+      if (originalMembers.length === 0) {
+        console.log('⚠️ Aucun membre dans le couple - couple déjà dissous');
+        return;
+      }
+      
+      // Quitter le couple signifie toujours dissoudre le couple (retirer tous les membres)
+      console.log('💔 Dissolution du couple - tous les membres retirés');
+      
+      // ÉTAPE 1: Marquer le couple comme quitté/dissous
+      console.log('📝 Mise à jour du couple...');
+      await updateDoc(doc(db, 'couples', coupleId), {
+        users: [],
+        leftAt: serverTimestamp(),
+        leftBy: userId,
+        status: 'left'
+      });
+      console.log('✅ Couple mis à jour');
+      
+      // ÉTAPE 2: Retirer TOUS les utilisateurs du couple (y compris le partenaire)
+      console.log('📝 Mise à jour des profils utilisateurs...');
+      console.log(`👥 Membres à traiter: ${originalMembers.length} - ${JSON.stringify(originalMembers)}`);
+      
+      for (const memberId of originalMembers) {
+        try {
+          console.log(`🔄 Traitement du membre: ${memberId} ${memberId === userId ? '(celui qui quitte)' : '(partenaire)'}`);
+          
+          // Vérifier le profil AVANT la mise à jour
+          const beforeDoc = await getDoc(doc(db, 'users', memberId));
+          const beforeData = beforeDoc.data();
+          console.log(`📋 AVANT - ${memberId} coupledWith: ${beforeData?.coupledWith}`);
+          
+          // Forcer la mise à jour avec plusieurs tentatives
+          let updateSuccess = false;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              await updateDoc(doc(db, 'users', memberId), {
+                coupledWith: null,
+                leftCoupleAt: serverTimestamp()
+              });
+              console.log(`✅ Tentative ${attempt} réussie pour ${memberId}`);
+              updateSuccess = true;
+              break;
+            } catch (updateError) {
+              console.error(`❌ Tentative ${attempt} échouée pour ${memberId}:`, updateError);
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre 1s
+              }
+            }
+          }
+          
+          if (!updateSuccess) {
+            throw new Error(`Impossible de mettre à jour le profil ${memberId} après 3 tentatives`);
+          }
+          
+          // Vérifier le profil APRÈS la mise à jour
+          const afterDoc = await getDoc(doc(db, 'users', memberId));
+          const afterData = afterDoc.data();
+          console.log(`📋 APRÈS - ${memberId} coupledWith: ${afterData?.coupledWith}`);
+          
+          if (afterData?.coupledWith === null) {
+            console.log(`✅ Profil ${memberId} mis à jour avec succès - coupledWith: null`);
+          } else {
+            console.error(`❌ ÉCHEC - Profil ${memberId} PAS mis à jour - coupledWith: ${afterData?.coupledWith}`);
+          }
+          
+          // Créer un log d'activité pour chaque membre
+          if (memberId !== userId) {
+            console.log(`📝 Création log d'activité pour le partenaire: ${memberId}`);
+            const memberActivityLogData = {
+              userId: memberId,
+              type: 'couple_left',
+              description: `Retiré du couple suite au départ de ${userId}`,
+              timestamp: serverTimestamp(),
+              coupleId: coupleId
+            };
+            await addDoc(collection(db, 'ActivityLogs'), memberActivityLogData);
+            console.log(`✅ Log d'activité créé pour le partenaire: ${memberId}`);
+          }
+        } catch (error) {
+          console.error(`❌ Erreur profil ${memberId}:`, error);
+        }
+      }
+      
+      console.log('🎯 TOUS les membres ont été retirés du couple');
+      
+      // VÉRIFICATION: S'assurer que le profil utilisateur principal est bien mis à jour
+      console.log('🔍 Vérification finale du profil utilisateur...');
+      const updatedUserDoc = await getDoc(doc(db, 'users', userId));
+      if (updatedUserDoc.exists()) {
+        const updatedUserData = updatedUserDoc.data();
+        console.log(`✅ Profil utilisateur vérifié - coupledWith: ${updatedUserData.coupledWith}`);
+        if (updatedUserData.coupledWith !== null) {
+          console.error('⚠️ ATTENTION: Le profil utilisateur n\'a pas été correctement mis à jour !');
+        }
+      }
+      
+      // ÉTAPE 3: Créer le log d'activité principal
+      console.log('📝 Création du log d\'activité...');
+      try {
+        const activityLogData = {
+          userId: userId,
+          type: 'couple_left',
+          description: 'A quitté le couple',
+          timestamp: serverTimestamp(),
+          coupleId: coupleId
+        };
+        await addDoc(collection(db, 'ActivityLogs'), activityLogData);
+        console.log('✅ Log d\'activité créé');
+      } catch (error) {
+        console.error('❌ Erreur log d\'activité:', error);
+      }
+      
+      // ÉTAPE 4: Annuler les invitations (optionnel)
+      console.log('📝 Annulation des invitations...');
+      try {
+        const invitationsQuery = query(
+          collection(db, 'couple_invitations'),
+          where('coupleId', '==', coupleId)
+        );
+        const invitationsSnapshot = await getDocs(invitationsQuery);
+        
+        for (const invitationDoc of invitationsSnapshot.docs) {
+          await updateDoc(invitationDoc.ref, {
+            status: 'cancelled',
+            cancelledAt: serverTimestamp()
+          });
+        }
+        console.log(`✅ ${invitationsSnapshot.docs.length} invitations annulées`);
+      } catch (error) {
+        console.error('❌ Erreur invitations:', error);
+      }
+      
+      console.log('✅ Utilisateur a quitté le couple avec succès');
+      
+    } catch (error) {
+      console.error('Error leaving couple:', error);
+      throw error;
+    }
+  }
+
+  // Dissoudre complètement un couple (pour les cas extrêmes)
+  static async dissolveCouple(userId: string, coupleId: string): Promise<void> {
+    try {
+      console.log('💥 Dissolution complète du couple...');
+      
+      // Vérifier que l'utilisateur fait partie du couple
+      const coupleDoc = await getDoc(doc(db, 'couples', coupleId));
+      if (!coupleDoc.exists()) {
+        throw new Error('Couple introuvable');
+      }
+      
+      const coupleData = coupleDoc.data();
+      if (!coupleData.users.includes(userId)) {
+        throw new Error('Vous ne faites pas partie de ce couple');
+      }
+      
+      const batch = writeBatch(db);
+      
+      // Marquer le couple comme dissous
+      batch.update(doc(db, 'couples', coupleId), {
+        users: [],
+        status: 'dissolved',
+        dissolvedAt: serverTimestamp(),
+        dissolvedBy: userId
+      });
+      
+      // Mettre à jour tous les utilisateurs du couple
+      for (const memberId of coupleData.users) {
+        batch.update(doc(db, 'users', memberId), {
+          coupledWith: null,
+          leftCoupleAt: serverTimestamp()
+        });
+      }
+      
+      // Annuler toutes les invitations en attente
+      const invitationsQuery = query(
+        collection(db, 'couple_invitations'),
+        where('coupleId', '==', coupleId),
+        where('status', '==', 'pending')
+      );
+      const invitationsSnapshot = await getDocs(invitationsQuery);
+      
+      invitationsSnapshot.docs.forEach((invitationDoc) => {
+        batch.update(invitationDoc.ref, {
+          status: 'cancelled',
+          cancelledAt: serverTimestamp()
+        });
+      });
+      
+      // Créer un log d'activité pour la dissolution
+      const activityLogData = {
+        userId: userId,
+        type: 'couple_dissolved',
+        description: 'A dissous le couple',
+        timestamp: serverTimestamp(),
+        coupleId: coupleId
+      };
+      
+      const activityLogRef = doc(collection(db, 'ActivityLogs'));
+      batch.set(activityLogRef, activityLogData);
+      
+      await batch.commit();
+      
+      console.log('✅ Couple dissous avec succès');
+      
+    } catch (error) {
+      console.error('Error dissolving couple:', error);
+      throw error;
+    }
+  }
+
+  // Rejoindre un couple existant (version simplifiée avec email)
+  static async joinCoupleByEmail(
+    userId: string,
+    partnerEmail: string,
+    pin: string
+  ): Promise<string> {
+    try {
+      console.log('🔍 Recherche couple par email partenaire...');
+      
+      // Trouver l'utilisateur partenaire par email
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('email', '==', partnerEmail.toLowerCase())
+      );
+      const partnerSnapshot = await getDocs(usersQuery);
+      
+      if (partnerSnapshot.empty) {
+        throw new Error('Aucun utilisateur trouvé avec cette adresse email');
+      }
+      
+      const partnerDoc = partnerSnapshot.docs[0];
+      const partnerData = partnerDoc.data() as UserProfile;
+      const partnerId = partnerDoc.id;
+      
+      // Vérifier que le partenaire a un couple
+      if (!partnerData.coupledWith) {
+        throw new Error('Cette personne n\'a pas encore créé de couple');
+      }
+      
+      // Récupérer le couple
+      const coupleDoc = await getDoc(doc(db, 'couples', partnerData.coupledWith));
+      if (!coupleDoc.exists()) {
+        throw new Error('Couple introuvable');
+      }
+      
+      const coupleData = coupleDoc.data();
+      
+      // Vérifier le PIN
+      const isValidPin = await EncryptionService.verifyPin(pin, coupleData.pin);
+      if (!isValidPin) {
+        throw new Error('PIN incorrect');
+      }
+      
+      // Vérifier que le couple n'est pas déjà complet
+      if (coupleData.users && coupleData.users.length >= 2) {
+        throw new Error('Ce couple est déjà complet');
+      }
+      
+      // Ajouter l'utilisateur au couple
+      const updatedUsers = [...(coupleData.users || []), userId];
+      await updateDoc(doc(db, 'couples', partnerData.coupledWith), {
+        users: updatedUsers
+      });
+      
+      // Mettre à jour le profil utilisateur
+      await updateDoc(doc(db, 'users', userId), {
+        coupledWith: partnerData.coupledWith
+      });
+      
+      console.log('✅ Utilisateur ajouté au couple avec succès');
+      return partnerData.coupledWith;
+      
+    } catch (error) {
+      console.error('Error joining couple by email:', error);
+      throw error;
+    }
+  }
+
+  // Rejoindre un couple existant (ancienne version avec code)
   static async joinCouple(
     userId: string, 
     inviteCode: string, 
@@ -216,37 +702,6 @@ export class FirestoreService {
     return { id: docSnap.id, ...docSnap.data() } as Couple;
   }
 
-  // Quitter un couple
-  static async leaveCouple(userId: string, coupleId: string): Promise<void> {
-    try {
-      const couple = await this.getCouple(coupleId);
-      
-      // Vérifier que l'utilisateur est bien dans ce couple
-      if (!couple.users.includes(userId)) {
-        throw new Error('Vous n\'êtes pas membre de ce couple');
-      }
-
-      // Si c'est le dernier membre, supprimer le couple
-      if (couple.users.length === 1) {
-        await deleteDoc(doc(db, 'couples', coupleId));
-      } else {
-        // Sinon, retirer l'utilisateur du couple
-        const updatedUsers = couple.users.filter(id => id !== userId);
-        await updateDoc(doc(db, 'couples', coupleId), {
-          users: updatedUsers
-        });
-      }
-
-      // Retirer la référence du couple du profil utilisateur
-      await updateDoc(doc(db, 'users', userId), {
-        coupledWith: null
-      });
-
-    } catch (error) {
-      console.error('Error leaving couple:', error);
-      throw error;
-    }
-  }
 
   // Écouter les changements d'un couple en temps réel
   static subscribeToCouple(
@@ -539,9 +994,18 @@ export class FirestoreService {
     
     const currentTopics = coupleDoc.data().topics || [];
     
-    // Vérifier si le topic existe
-    if (!currentTopics.includes(topicName)) {
-      throw new Error('Topic introuvable');
+    // Debug: afficher les topics disponibles
+    console.log('Topics disponibles:', currentTopics);
+    console.log('Topic à supprimer:', topicName);
+    console.log('Topic existe?', currentTopics.includes(topicName));
+    
+    // Vérifier si le topic existe (comparaison insensible à la casse)
+    const topicExists = currentTopics.some((topic: string) => 
+      topic.toLowerCase().trim() === topicName.toLowerCase().trim()
+    );
+    
+    if (!topicExists) {
+      throw new Error(`Topic "${topicName}" introuvable. Topics disponibles: ${currentTopics.join(', ')}`);
     }
     
     // Empêcher la suppression du topic principal
@@ -549,8 +1013,10 @@ export class FirestoreService {
       throw new Error('Le topic principal ne peut pas être supprimé');
     }
     
-    // Supprimer le topic
-    const updatedTopics = currentTopics.filter((topic: string) => topic !== topicName);
+    // Supprimer le topic (comparaison insensible à la casse)
+    const updatedTopics = currentTopics.filter((topic: string) => 
+      topic.toLowerCase().trim() !== topicName.toLowerCase().trim()
+    );
     
     await updateDoc(coupleRef, { topics: updatedTopics });
     
@@ -575,6 +1041,37 @@ export class FirestoreService {
     });
     
     await batch.commit();
+  }
+
+  // Effacer tous les messages d'un topic
+  static async clearTopicMessages(
+    coupleId: string,
+    topicName: string
+  ): Promise<void> {
+    try {
+      const messagesRef = collection(db, 'couples', coupleId, 'messages');
+      const q = query(messagesRef, where('topic', '==', topicName));
+      
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        console.log('Aucun message à supprimer pour ce topic');
+        return;
+      }
+      
+      // Supprimer tous les messages par batch
+      const batch = writeBatch(db);
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      
+      await batch.commit();
+      
+      console.log(`${snapshot.size} messages supprimés du topic "${topicName}"`);
+    } catch (error) {
+      console.error('Error clearing topic messages:', error);
+      throw new Error('Impossible d\'effacer les messages du topic');
+    }
   }
 
   // Déplacer les messages vers le topic principal

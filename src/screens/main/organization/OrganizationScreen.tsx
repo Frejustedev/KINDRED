@@ -138,39 +138,6 @@ export const OrganizationScreen: React.FC<OrganizationScreenProps> = ({ navigati
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Accès rapide</Text>
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.quickAction}
-              onPress={() => navigation.navigate('Agenda')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add-circle" size={24} color={colors.primary} />
-              <Text style={styles.quickActionText}>Nouvel événement</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.quickAction}
-              onPress={() => navigation.navigate('SharedLists')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add-circle" size={24} color={colors.success} />
-              <Text style={styles.quickActionText}>Nouvelle liste</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.quickAction}
-              onPress={() => navigation.navigate('CollaborativeNotes')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add-circle" size={24} color={colors.warning} />
-              <Text style={styles.quickActionText}>Nouvelle note</Text>
-            </TouchableOpacity>
-            
-
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -255,27 +222,5 @@ const styles = StyleSheet.create({
   featureDescription: {
     fontSize: 14,
     color: colors.textLight,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  quickAction: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    minWidth: 100,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  quickActionText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: colors.text,
-    textAlign: 'center',
   },
 });

@@ -8,7 +8,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
-import { colors } from '../../constants/colors';
+import { colors, shadowStyles } from '../../constants/colors';
 
 interface ReactionPickerProps {
   visible: boolean;
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     maxHeight: 400,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   header: {
     flexDirection: 'row',

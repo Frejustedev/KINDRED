@@ -32,22 +32,14 @@ export const colors = {
   warningLight: '#FCD34D', // Amber-300
   info: '#3B82F6',         // Blue-500
   infoLight: '#93C5FD',    // Blue-300
+  infoExtraLight: '#DBEAFE', // Blue-100
   
   // Gradients
   gradient: ['#EC4899', '#A855F7'] as const,
   gradientDark: ['#DB2777', '#9333EA'] as const,
   
-  // Shadows
-  shadow: {
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
+  // Shadow color
+  shadow: '#000000',
   
   // Special
   overlay: 'rgba(0, 0, 0, 0.5)',
@@ -55,6 +47,19 @@ export const colors = {
   disabled: '#D1D5DB',     // Gray-300
   border: '#E5E7EB',       // Gray-200
   gray: '#6B7280',         // Gray-500
+  card: '#FFFFFF',
+};
+
+// Styles d'ombre
+export const shadowStyles = {
+  shadowColor: "#000",
+  shadowOffset: {
+    width: 0,
+    height: 2,
+  },
+  shadowOpacity: 0.1,
+  shadowRadius: 3.84,
+  elevation: 5,
 };
 
 // Theme variations
@@ -71,4 +76,5 @@ export const darkTheme = {
   textSecondary: '#D1D5DB', // Gray-300
   textLight: '#9CA3AF',     // Gray-400
   divider: '#374151',       // Gray-700
+  card: '#1F2937',
 };

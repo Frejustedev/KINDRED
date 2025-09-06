@@ -11,7 +11,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../constants/colors';
+import { colors, shadowStyles } from '../../constants/colors';
 import { Header } from '../../components/common/Header';
 import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
@@ -30,7 +30,7 @@ interface SettingsScreenProps {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { user, signOut, profile, refreshProfile, isEmailVerified, resendVerificationEmail } = useAuth();
   const { couple, generateInviteCode, refreshCouple, leaveCouple } = useCouple();
-  const { isNotificationsEnabled, requestPermissions, clearBadge } = useNotifications();
+  const { unreadCount: notificationUnreadCount } = useNotifications();
   const { unreadCount } = useActivityLogs();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [dailyReminders, setDailyReminders] = useState(true);
@@ -100,31 +100,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
     }
   }, [refreshProfile, refreshCouple, loadPreferences]);
 
-  const handleLeaveCouple = () => {
-    Alert.alert(
-      'Quitter le couple',
-      'Êtes-vous sûr de vouloir quitter ce couple ? Cette action est irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Quitter', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              await leaveCouple();
-              Alert.alert('Succès', 'Vous avez quitté le couple');
-            } catch (error: any) {
-              console.error('Leave couple error:', error);
-              Alert.alert('Erreur', error.message || 'Impossible de quitter le couple');
-            } finally {
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
-    );
-  };
 
   const handleResendVerificationEmail = async () => {
     try {
@@ -182,6 +157,36 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
       Alert.alert('Erreur', error.message);
     }
   };
+
+  const handleLeaveCouple = () => {
+    Alert.alert(
+      'Quitter le couple',
+      'Êtes-vous sûr de vouloir quitter ce couple ? Cette action retirera TOUS les membres du couple et le dissoudra définitivement. Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Quitter',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await leaveCouple();
+              Alert.alert(
+                'Couple dissous',
+                'Le couple a été dissous. Tous les membres ont été retirés.',
+                [{ text: 'OK', onPress: () => navigation.navigate('Main') }]
+              );
+            } catch (error: any) {
+              Alert.alert('Erreur', error.message);
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
 
   const handleViewCoupleInfo = () => {
     navigation.navigate('CoupleInfo');
@@ -250,39 +255,115 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
   const handleChangePIN = () => {
     Alert.alert(
       'Modifier le code PIN',
-      'Cette fonctionnalité sera disponible dans une prochaine version.',
-      [{ text: 'OK' }]
+      'Entrez votre nouveau code PIN (4 chiffres) :',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Modifier',
+          onPress: () => {
+            Alert.alert(
+              'Code PIN',
+              'Cette fonctionnalité nécessite une interface sécurisée et sera disponible dans une prochaine version.',
+              [{ text: 'OK' }]
+            );
+          }
+        }
+      ]
     );
   };
 
   const handleExportData = () => {
     Alert.alert(
       'Exporter les données',
-      'Cette fonctionnalité sera disponible dans une prochaine version.',
-      [{ text: 'OK' }]
+      'Sélectionnez le format d\'export :',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'JSON',
+          onPress: () => {
+            Alert.alert(
+              'Export JSON',
+              'L\'export au format JSON sera disponible dans une prochaine version.\n\nCela inclura :\n• Messages\n• Dates marquantes\n• Listes partagées\n• Notes collaboratives',
+              [{ text: 'OK' }]
+            );
+          }
+        },
+        {
+          text: 'PDF',
+          onPress: () => {
+            Alert.alert(
+              'Export PDF',
+              'L\'export au format PDF sera disponible dans une prochaine version.',
+              [{ text: 'OK' }]
+            );
+          }
+        }
+      ]
     );
   };
 
   const handleContactSupport = () => {
     Alert.alert(
       'Contacter le support',
-      'Email : support@kindred-app.com\n\nNous répondons sous 24h.',
-      [{ text: 'OK' }]
+      'Comment souhaitez-vous nous contacter ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Email',
+          onPress: () => {
+            Alert.alert(
+              'Support par Email',
+              'Email : support@kindred-app.com\n\nNous répondons sous 24h.\n\nVeuillez inclure :\n• Votre adresse email\n• Description du problème\n• Captures d\'écran si nécessaire',
+              [{ text: 'OK' }]
+            );
+          }
+        },
+        {
+          text: 'FAQ',
+          onPress: () => navigation.navigate('Help')
+        }
+      ]
     );
   };
 
   const handleRateApp = () => {
     Alert.alert(
       'Évaluer l\'application',
-      'Merci pour votre intérêt ! Cette fonctionnalité sera disponible prochainement.',
-      [{ text: 'OK' }]
+      'Que pensez-vous de Kindred ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: '⭐ Excellent',
+          onPress: () => {
+            Alert.alert(
+              'Merci ! ⭐⭐⭐⭐⭐',
+              'Nous sommes ravis que vous aimiez Kindred !\n\nVotre avis nous aide à améliorer l\'application.\n\nLa notation sur les stores sera disponible prochainement.',
+              [{ text: 'OK' }]
+            );
+          }
+        },
+        {
+          text: '👍 Bien',
+          onPress: () => {
+            Alert.alert(
+              'Merci pour votre retour !',
+              'Nous travaillons constamment pour améliorer votre expérience.\n\nN\'hésitez pas à nous faire part de vos suggestions via le support.',
+              [{ text: 'OK' }]
+            );
+          }
+        },
+        {
+          text: '💬 Suggestions',
+          onPress: () => handleContactSupport()
+        }
+      ]
     );
   };
 
   const handleAboutApp = () => {
     Alert.alert(
       'À propos de Kindred',
-      'Version 1.0 du 26/08/25\n\nDéveloppeur : Frejuste Agboton\nSite : frejusteagboton.info\n\nUne application pour couples qui souhaitent partager leur vie ensemble.',
+      'Version 1.01 du 06/09/25\n\nDéveloppeur : Frejuste Agboton\nSite : frejusteagboton.info\n\nUne application pour couples qui souhaitent partager leur vie ensemble.',
       [{ text: 'OK' }]
     );
   };
@@ -356,13 +437,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           <View style={styles.profileCard}>
             <View style={styles.profileAvatar}>
               <Text style={styles.profileAvatarText}>
-                {profile?.displayName?.charAt(0) || user?.email?.charAt(0) || '?'}
+                {profile?.firstName?.charAt(0) || user?.email?.charAt(0) || '?'}
               </Text>
             </View>
             
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
-                {profile?.displayName || 'Utilisateur'}
+                {profile?.firstName || 'Utilisateur'}
               </Text>
               <Text style={styles.profileEmail}>{user?.email}</Text>
               
@@ -407,19 +488,37 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           
           {couple ? (
             <>
-              {renderSettingItem(
-                'heart-outline',
-                'Informations du couple',
-                `Créé le ${couple.startDate?.toDate?.().toLocaleDateString('fr-FR') || 'Date inconnue'}`,
-                <TouchableOpacity 
-                  style={styles.infoButton}
-                  onPress={handleViewCoupleInfo}
-                >
-                  <Text style={styles.infoButtonText}>Voir</Text>
-                </TouchableOpacity>
+              {/* Vérifier si le couple est complet ou en attente */}
+              {couple.users && couple.users.length < 2 ? (
+                // Couple en attente de connexion
+                renderSettingItem(
+                  'time-outline',
+                  'En attente de connexion',
+                  'Votre partenaire n\'a pas encore rejoint le couple',
+                  <TouchableOpacity 
+                    style={[styles.infoButton, styles.pendingButton]}
+                    onPress={() => navigation.navigate('PendingConnection')}
+                  >
+                    <Text style={[styles.infoButtonText, styles.pendingButtonText]}>Voir</Text>
+                  </TouchableOpacity>
+                )
+              ) : (
+                // Couple complet
+                renderSettingItem(
+                  'heart-outline',
+                  'Informations du couple',
+                  `Créé le ${couple.startDate?.toDate?.().toLocaleDateString('fr-FR') || 'Date inconnue'}`,
+                  <TouchableOpacity 
+                    style={styles.infoButton}
+                    onPress={handleViewCoupleInfo}
+                  >
+                    <Text style={styles.infoButtonText}>Voir</Text>
+                  </TouchableOpacity>
+                )
               )}
               
-              {renderSettingItem(
+              {/* Afficher le code d'invitation seulement si le couple n'est pas complet */}
+              {couple?.users?.length < 2 && renderSettingItem(
                 'ticket-outline',
                 'Code d\'invitation',
                 'Générer un nouveau code',
@@ -431,10 +530,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                 </TouchableOpacity>
               )}
               
+              {/* Message informatif si le couple est complet */}
+              {couple?.users?.length >= 2 && renderSettingItem(
+                'checkmark-circle',
+                'Couple complet',
+                'Votre couple est complet !',
+                <Text style={styles.statusText}>✓</Text>
+              )}
+              
               {renderSettingItem(
                 'exit-outline',
                 'Quitter le couple',
-                'Se séparer de votre partenaire',
+                'Dissoudre le couple pour tous les membres',
                 <TouchableOpacity 
                   style={[styles.actionButton, styles.dangerButton]}
                   onPress={handleLeaveCouple}
@@ -442,6 +549,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
                   <Text style={[styles.actionButtonText, styles.dangerButtonText]}>Quitter</Text>
                 </TouchableOpacity>
               )}
+
             </>
           ) : (
             <View style={styles.emptyState}>
@@ -451,7 +559,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
               <View style={styles.buttonContainer}>
                 <Button
                   title="Créer ou rejoindre un couple"
-                  onPress={() => navigation.navigate('Coupling')}
+                  onPress={() => navigation.navigate('SimpleCoupling')}
                   variant="primary"
                   size="small"
                   style={styles.coupleButton}
@@ -499,8 +607,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           {renderSettingItem(
             'notifications-outline',
             'Notifications push',
-            isNotificationsEnabled ? 'Activées' : 'Désactivées',
-            renderSwitch(isNotificationsEnabled, handleToggleNotifications)
+            notificationsEnabled ? 'Activées' : 'Désactivées',
+            renderSwitch(notificationsEnabled, handleToggleNotifications)
           )}
           
           {renderSettingItem(
@@ -509,7 +617,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
             'Nombre de messages non lus',
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={clearBadge}
+              onPress={async () => {
+                try {
+                  await NotificationService.clearBadge();
+                  Alert.alert('Succès', 'Badge effacé');
+                } catch (error: any) {
+                  Alert.alert('Erreur', error.message || 'Impossible d\'effacer le badge');
+                }
+              }}
             >
               <Text style={styles.actionButtonText}>Effacer</Text>
             </TouchableOpacity>
@@ -575,7 +690,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           {renderSettingItem(
             'phone-portrait-outline',
             'Version',
-            '1.0.0',
+            '1.01 du 06/09/25',
             <Text style={styles.statusText}>À jour</Text>
           )}
           
@@ -654,7 +769,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           {renderSettingItem(
             'information-circle-outline',
             'À propos de l\'application',
-            'Version 1.0 du 26/08/25',
+            'Version 1.01 du 06/09/25',
             <TouchableOpacity 
               style={styles.infoButton}
               onPress={handleAboutApp}
@@ -726,7 +841,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   profileAvatar: {
     width: 60,
@@ -803,7 +918,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   settingIcon: {
     width: 40,
@@ -902,5 +1017,13 @@ const styles = StyleSheet.create({
   },
   signOutButtonText: {
     color: colors.textOnPrimary,
+  },
+  pendingButton: {
+    backgroundColor: colors.warning + '20',
+    borderColor: colors.warning,
+    borderWidth: 1,
+  },
+  pendingButtonText: {
+    color: colors.warning,
   },
 });

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
-import { colors } from '../../../constants/colors';
+import { colors, shadowStyles } from '../../../constants/colors';
 import { Header } from '../../../components/common/Header';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    ...colors.shadow,
+    ...shadowStyles,
   },
   eventHeader: {
     flexDirection: 'row',
